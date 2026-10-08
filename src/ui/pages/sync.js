@@ -100,8 +100,9 @@ function connectionSection(ctx) {
     const form = h("form", { className: "form-card", novalidate: true }, [
       h("p", { className: "muted", text: "填入 Apps Script Web App 網址與 Google 用戶端 ID（設定方式見 ocean-gas/README.md）。這兩個值不是密碼，只存在這台裝置。" }),
       h("p", { className: "field-error", hidden: true, dataset: { formErrors: "" } }),
-      field("Web App 網址", input("endpoint", config?.endpoint || "", { placeholder: "https://script.google.com/macros/s/…/exec", inputmode: "url" })),
-      field("Google 用戶端 ID", input("clientId", config?.clientId || "", { placeholder: "…apps.googleusercontent.com" })),
+      // A setup link (#/settings?endpoint=…&clientId=…) pre-fills a new phone; the values stay in the fragment and never reach the web host.
+      field("Web App 網址", input("endpoint", config?.endpoint || ctx.route.query.get("endpoint") || "", { placeholder: "https://script.google.com/macros/s/…/exec", inputmode: "url" })),
+      field("Google 用戶端 ID", input("clientId", config?.clientId || ctx.route.query.get("clientId") || "", { placeholder: "…apps.googleusercontent.com" })),
       h("div", { className: "form-actions" }, [h("button", { type: "submit", className: "primary", text: config ? "更新並重新連線" : "儲存並連線" })]),
     ]);
     const signIn = h("div", { dataset: { signIn: "" } });
