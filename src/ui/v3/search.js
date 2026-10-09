@@ -1,4 +1,5 @@
 import { globalSearch, snippet } from "../../data/search.js";
+import { opportunityTitle } from "../../data/products.js";
 import { customerIdentity } from "../../data/model.js";
 import { badge, emptyState, h, money } from "../dom.js";
 import { registerPage } from "../app.js";
@@ -59,7 +60,7 @@ export function renderSearch(ctx, route) {
       ])]))),
       group("商機", found.totals.opportunities, found.opportunities.length, found.opportunities.map((opportunity) => {
         // Some imported names are whole paragraphs: show a short name, and where the keyword was found.
-        const name = snippet(opportunity.name, "", 30);
+        const name = opportunityTitle(opportunity, 30);
         const where = [opportunity.name, opportunity.product, opportunity.nextAction, opportunity.notes].find((value) => String(value || "").toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
         return h("li", {}, [h("a", { href: `#/case/${encodeURIComponent(opportunity.id)}` }, [
           h("strong", {}, highlight(name, query)),

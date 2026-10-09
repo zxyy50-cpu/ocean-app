@@ -33,10 +33,10 @@ function duplicateNotice(ctx, candidates) {
   ]);
 }
 
-export function openCustomerEditor(ctx, { customer = null, onSaved } = {}) {
+export function openCustomerEditor(ctx, { customer = null, initial = {}, onSaved } = {}) {
   const isNew = !customer;
   const rid = requestId(isNew ? "customer-create" : "customer-edit");
-  const values = customer || { relationStatus: "未接觸", areaTags: [] };
+  const values = customer || { relationStatus: "未接觸", areaTags: [], ...initial };
   return openDialog((close) => {
     const form = h("form", { className: "sheet-body", novalidate: true, dataset: { form: "customer" } });
     const noticeSlot = h("div", { dataset: { noticeSlot: "" } });
@@ -56,16 +56,22 @@ export function openCustomerEditor(ctx, { customer = null, onSaved } = {}) {
       h("div", { className: "form-grid" }, [
         field("公司名稱 *", input("name", values.name, { required: true, autocomplete: "organization" }), { className: "span-2" }),
         field("客戶編號", input("customerNo", values.customerNo), { hint: "成交後由 ERP 取得，潛在客戶可先空白" }),
-        field("統編", input("taxId", values.taxId, { inputmode: "numeric", maxlength: 8 })),
         field("公司電話", input("phone", values.phone, { inputmode: "tel" })),
-        field("關係狀態", select("relationStatus", statusOptions(values.relationStatus), values.relationStatus)),
         field("地址", input("address", values.address, { autocomplete: "street-address" }), { className: "span-2" }),
         areaPicker(ctx, values.areaTags || []),
-        field("產業／客群標籤", input("industryTags", (values.industryTags || []).join("、")), { hint: "用「、」分隔，例如：乳品、食品廠" }),
-        field("產品興趣標籤", input("productTags", (values.productTags || []).join("、"))),
-        field("其他分類標籤", input("segmentTags", (values.segmentTags || []).join("、")), { className: "span-2" }),
+        field("產業／客群", input("industryTags", (values.industryTags || []).join("、")), { hint: "用「、」分隔，例如：乳品、食品廠" }),
+        field("關係狀態", select("relationStatus", statusOptions(values.relationStatus), values.relationStatus)),
         field("備註", h("textarea", { name: "notes", rows: 3, value: values.notes || "" }), { className: "span-2" }),
         contactBlock,
+        // Rarely needed for selling; folded so the form stays short (still saved if filled).
+        h("details", { className: "span-2", dataset: { moreCustomerFields: "" } }, [
+          h("summary", { text: "其他欄位（統編、產品興趣、其他分類，選填）" }),
+          h("div", { className: "form-grid" }, [
+            field("統編", input("taxId", values.taxId, { inputmode: "numeric", maxlength: 8 })),
+            field("產品興趣標籤", input("productTags", (values.productTags || []).join("、"))),
+            field("其他分類標籤", input("segmentTags", (values.segmentTags || []).join("、")), { className: "span-2" }),
+          ]),
+        ]),
       ]),
       h("div", { className: "sheet-actions" }, [
         h("button", { type: "button", className: "ghost", text: "取消", onClick: close }),
@@ -107,6 +113,8 @@ export function openCustomerEditor(ctx, { customer = null, onSaved } = {}) {
         : await updateCustomer(ctx.db, customer.id, raw, { expectedRev: customer.localRev, requestId: `${rid}:${Date.now()}` });
       if (!result.ok) {
         if (result.error === "stale") { showErrors(form, { _: "這筆資料剛剛在別處被修改過，請關閉後重新開啟再編輯。你輸入的內容還在畫面上。" }); return; }
+        const more = form.querySelector("[data-more-customer-fields]");
+        if (more && result.errors?.taxId) more.open = true;
         showErrors(form, result.errors || { _: "儲存失敗，請再試一次" });
         return;
       }

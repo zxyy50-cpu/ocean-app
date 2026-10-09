@@ -139,8 +139,11 @@ export async function saveVisit(db, input, { requestId, today } = {}) {
       if (String(input.opportunityProbability ?? "").trim() !== "") patch.probability = input.opportunityProbability;
       if (input.opportunityCloseDate) patch.expectedCloseDate = input.opportunityCloseDate;
       if (input.opportunityLostReason) patch.lostReason = input.opportunityLostReason;
+      if (cleanText(input.opportunityProduct)) patch.product = cleanText(input.opportunityProduct);
       const current = await tx.get("opportunity", input.opportunityId);
       if (!current || current.customerId !== customer.id) tx.fail("validation", { errors: { "opportunity.id": "這個商機不屬於此客戶" } });
+      // The person met becomes the case's contact when it has none yet.
+      if (contactId && !current.contactId) patch.contactId = contactId;
       opportunityId = (await updateOpportunityIn(tx, input.opportunityId, patch)).id;
     }
     const activity = await tx.create("activity", {

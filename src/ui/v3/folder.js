@@ -2,6 +2,7 @@ import { toDateOnly } from "../../core/dates.js";
 import { requestId } from "../../core/ids.js";
 import { duplicateCandidates, restoreCustomer, setImportant } from "../../data/customers.js";
 import { customerIdentity } from "../../data/model.js";
+import { opportunityTitle } from "../../data/products.js";
 import { badge, emptyState, h, money, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { openArchiveCustomer, openCustomerEditor } from "../forms/customer-forms.js";
@@ -44,7 +45,7 @@ function entryRow(ctx, entry, first) {
   const label = { "opportunity-open": "建立商機", won: "成交", lost: "未成交" }[entry.kind];
   return h("li", {}, [
     h("div", { className: "when", text: `${entry.date}・${label}` }),
-    h("a", { href: `#/case/${encodeURIComponent(opportunity.id)}`, text: `${opportunity.name}${opportunity.amount ? `・${money(opportunity.amount)}` : ""}` }),
+    h("a", { href: `#/case/${encodeURIComponent(opportunity.id)}`, text: `${opportunityTitle(opportunity, 30)}${opportunity.amount ? `・${money(opportunity.amount)}` : ""}` }),
   ]);
 }
 

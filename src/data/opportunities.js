@@ -96,12 +96,18 @@ export function normalizeReview(review = {}) {
   return Object.values(values).some(Boolean) ? values : null;
 }
 
-export function markWon(db, id, requestId, { amount, review } = {}) {
-  return updateOpportunity(db, id, { stage: "成交", probability: 100, ...(amount !== undefined ? { amount } : {}), ...(review ? { review } : {}) }, requestId);
+export function markWon(db, id, requestId, { amount, review, notes } = {}) {
+  return updateOpportunity(db, id, { stage: "成交", probability: 100, ...(amount !== undefined ? { amount } : {}), ...(review ? { review } : {}), ...(notes !== undefined ? { notes } : {}) }, requestId);
 }
 
-export function markLost(db, id, lostReason, requestId, { review } = {}) {
-  return updateOpportunity(db, id, { stage: "失敗", probability: 0, lostReason, ...(review ? { review } : {}) }, requestId);
+export function markLost(db, id, lostReason, requestId, { review, notes } = {}) {
+  return updateOpportunity(db, id, { stage: "失敗", probability: 0, lostReason, ...(review ? { review } : {}), ...(notes !== undefined ? { notes } : {}) }, requestId);
+}
+
+// A dated free-text line goes on top of the existing notes (undefined = leave notes alone).
+export function prependNote(existing, text, date) {
+  const line = String(text || "").trim();
+  return line ? [`${date}：${line}`, String(existing || "").trim()].filter(Boolean).join("\n") : undefined;
 }
 
 export function lossReasonSummary(opportunities = []) {

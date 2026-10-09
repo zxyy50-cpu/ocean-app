@@ -6,6 +6,7 @@ import { recommendToolkit } from "../../data/toolkit.js";
 import { QUALIFICATION_ITEMS, qualificationTier, qualificationTotal, saveQualification } from "../../data/qualification.js";
 import { RELATIONSHIP_DIMENSIONS, relationshipTotals, saveRelationshipScore } from "../../data/relationship.js";
 import { customerIdentity, primaryContact } from "../../data/model.js";
+import { opportunityCategory, opportunityTitle } from "../../data/products.js";
 import { badge, chipGroup, confirmDialog, emptyState, formToObject, h, money, showErrors, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { openArchiveCustomer, openContactEditor, openCustomerEditor } from "../forms/customer-forms.js";
@@ -126,7 +127,8 @@ export function opportunitiesCard(ctx, customer) {
   const open = all.filter((opportunity) => ["接觸", "提案", "議價"].includes(opportunity.stage));
   const closed = all.filter((opportunity) => !open.includes(opportunity));
   const row = (opportunity) => h("a", { href: `#/opportunity/${encodeURIComponent(opportunity.id)}`, className: `opp-card${isOpportunityOverdue(opportunity, today) ? " overdue" : ""}` }, [
-    h("strong", { text: opportunity.name }),
+    h("strong", { text: opportunityTitle(opportunity, 34) }),
+    opportunityCategory(opportunity) ? h("small", { className: "muted", text: opportunityCategory(opportunity) }) : null,
     h("span", { className: "meta", text: [opportunity.stage, opportunity.amount ? money(opportunity.amount) : null, opportunity.probability !== null && opportunity.probability !== undefined && opportunity.probability !== "" ? `${opportunity.probability}%` : null, opportunity.expectedCloseDate ? `預計 ${opportunity.expectedCloseDate}` : null].filter(Boolean).join("・") }),
     isOpportunityOverdue(opportunity, today) ? badge("已逾期，請更新", "warn") : null,
   ]);

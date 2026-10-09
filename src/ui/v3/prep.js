@@ -1,6 +1,7 @@
 import { daysBetween } from "../../core/dates.js";
 import { createDraftStore } from "../../data/drafts.js";
 import { buildPrep } from "../../data/prep.js";
+import { opportunityTitle } from "../../data/products.js";
 import { badge, emptyState, field, h, input, money } from "../dom.js";
 import { registerPage } from "../app.js";
 import { captureDraftKey } from "./capture.js";
@@ -30,7 +31,7 @@ export function renderPrep(ctx, route) {
     h("header", { className: "page-header" }, [h("div", {}, [
       h("p", { className: "eyebrow" }, [h("a", { href: `#/customer/${encodeURIComponent(customer.id)}`, text: customer.name })]),
       h("h1", { text: "拜訪前準備" }),
-      opportunity ? h("p", { text: `${opportunity.name}・${opportunity.stage}${opportunity.amount ? `・${money(opportunity.amount)}` : ""}` }) : h("p", { className: "muted", text: "沒有進行中的商機" }),
+      opportunity ? h("p", { text: `${opportunityTitle(opportunity, 30)}・${opportunity.stage}${opportunity.amount ? `・${money(opportunity.amount)}` : ""}` }) : h("p", { className: "muted", text: "沒有進行中的商機" }),
     ])]),
     quickContact(ctx, customer),
     block("上次聊到", [

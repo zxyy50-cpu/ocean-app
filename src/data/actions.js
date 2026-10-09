@@ -1,7 +1,7 @@
 import { daysBetween } from "../core/dates.js";
 import { caseRedFlags } from "./case-analysis.js";
 import { lastActivity, primaryContact } from "./model.js";
-import { snippet } from "./search.js";
+import { opportunityTitle } from "./products.js";
 import { buildToday } from "./today.js";
 
 export const NOW_LIMIT = 7;
@@ -28,7 +28,7 @@ function action(model, item, today, extra = {}) {
     customerId: item.customerId,
     contact,
     title: `${verb} ${customer?.name || "（未知客戶）"}${contact ? `・${contact.name}` : ""}`,
-    why: [item.title, opportunity ? `商機「${snippet(opportunity.name, "", 24)}」${opportunity.stage}` : null].filter(Boolean).join("・"),
+    why: [item.title, opportunity ? `商機「${opportunityTitle(opportunity, 24)}」${opportunity.stage}` : null].filter(Boolean).join("・"),
     last: lastSaid(model, item.customerId),
     dueDate: item.dueDate,
     late,
