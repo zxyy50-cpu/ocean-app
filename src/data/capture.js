@@ -62,7 +62,13 @@ function weekdayAfter(today, target, nextWeek) {
   return date;
 }
 
-// Understands 今天/明天/後天、N 天後、(下)週X、下週、M/D、M月D日、月底、下個月. Relative days skip weekends.
+// Last working day of a month (a weekend month-end moves back to Friday).
+function lastWorkdayOfMonth(year, month) {
+  const last = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+  return addDays(last, weekday(last) === 6 ? -1 : weekday(last) === 0 ? -2 : 0);
+}
+
+// Understands 今天/明天/後天、N 天後、(下)週X、下週、M/D、M月D日、月底、下個月、年底／第四季、年初. Relative days skip weekends.
 export function parseDate(text, today) {
   const value = String(text || "");
   const rules = [
@@ -82,13 +88,10 @@ export function parseDate(text, today) {
       if (!isDateOnly(date)) return null;
       return date < today ? make(year + 1) : date;
     }],
-    [/月底/, () => {
-      // Last working day of this month (a weekend month-end moves back to Friday).
-      const [y, mo] = today.split("-").map(Number);
-      const last = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
-      return addDays(last, weekday(last) === 6 ? -1 : weekday(last) === 0 ? -2 : 0);
-    }],
+    [/月底/, () => lastWorkdayOfMonth(...today.split("-").slice(0, 2).map(Number))],
     [/下(?:個)?月/, () => addWorkdays(today, 30)],
+    [/年底|年末|第四季|Q4/i, () => lastWorkdayOfMonth(Number(today.slice(0, 4)), 12)],
+    [/明年初|年初/, () => lastWorkdayOfMonth(Number(today.slice(0, 4)) + 1, 1)],
   ];
   // Collect every date expression; "今天" usually describes the visit itself, so a later
   // expression wins, and among the rest the one written last (the promised next step) wins.
@@ -126,34 +129,64 @@ const CHANNELS = [
   ["LINE", /line/i],
   ["Email", /email|e-mail|寄信|來信|mail/i],
   ["電話", /電話|打給|來電|撥給|通話/],
-  ["親訪", /拜訪|到廠|現場|見面|過去|面談|親訪|去了/],
+  ["親訪", /拜訪|到廠|現場|見面|過去|面談|親訪|去了|(我|今天|昨天|剛剛|早上|上午|下午)(去|到)/],
   ["展覽／研討會", /展覽|研討會|攤位/],
 ];
 
-const NEXT_STEP = /(要|請|給|寄|報價|送樣|demo|試用|試算|回覆|提供|安排|約|準備|確認|追蹤|再聯絡)/i;
+const NEXT_STEP = /(要|請|給|寄|報價|送樣|demo|試用|試算|回覆|提供|安排|約|準備|確認|追蹤|再聯絡|推)/i;
+// Clauses about when the deal closes give the opportunity's close date, not a reminder.
+const CLOSING = /結案|成交|簽約|簽下|下單|採購|拍板/;
+
+// Dictated notes have no punctuation, so a space before a Chinese word also ends a clause.
+export function splitClauses(text) {
+  return String(text || "").split(/[，,。；;！!？?\n]|\s+(?=[一-鿿])/).map((part) => part.trim()).filter(Boolean);
+}
 
 export function parseNextAction(text) {
-  const clauses = String(text || "").split(/[，,。；;！!\n]/).map((part) => part.trim()).filter(Boolean);
-  // Things already done ("已回覆") or turned down ("不需要換") are not next steps.
+  const clauses = splitClauses(text);
+  // Things already done ("已回覆") or turned down ("不需要換") are not next steps, nor is the close date.
   const index = clauses.map((clause, position) => ({ clause, position })).reverse()
-    .find(({ clause }) => NEXT_STEP.test(clause) && clause.length >= 3 && !/^已|已經|不需要|不用|不要/.test(clause))?.position;
+    .find(({ clause }) => NEXT_STEP.test(clause) && clause.length >= 3 && !/^已|已經|不需要|不用|不要/.test(clause) && !CLOSING.test(clause))?.position;
   if (index === undefined) return "";
-  let pick = clauses[index].replace(/^(然後|之後|再|我要|我們要|我會|下次)/, "");
+  let pick = clauses[index].replace(/^(然後|之後|再|我要|我們要|我會|下次|要)/, "");
   // "下週二前給" alone doesn't say what; borrow the clause before it ("廠長要看人力節省試算").
   const withoutDate = pick.replace(/(大?後天|明天|今天|\d{1,2}\s*天後|下?(個)?(週|周|星期|禮拜)[一二三四五六日天]?|\d{1,2}\s*[/月]\s*\d{1,2}\s*[日號]?|月底|下(個)?月|前|之前|給|再)/g, "");
   if (withoutDate.trim().length < 2 && index > 0) pick = `${clauses[index - 1]}（${pick}）`;
   return pick.slice(0, 40);
 }
 
+// Products and test items worth naming an opportunity after.
+const PRODUCT_TERMS = /沙門氏?菌|李斯特菌|金黃色?葡萄球菌|大腸桿菌|腸桿菌科?|總生菌|生菌數|黴菌|酵母菌|過敏原|組織胺|抗生素|快篩|培養基|試劑|儀器|設備|環境監控|檢驗服務/g;
+const LATIN_NOISE = new Set(["DEMO", "LINE", "EMAIL", "MAIL", "ERP", "PDF", "DM", "OK", "QC", "QA", "TEST"]);
+const BUYING_INTENT = /推|報價|提案|導入|試用|評估|採購|想買|要買|換成|改用|引進|有興趣|demo|買/i;
+
+export function parseProducts(text) {
+  const value = String(text || "");
+  // A brand right after 比／用／換掉 is what the customer uses now (a competitor), not what we sell.
+  const competitor = new Set([...value.matchAll(/(?:比|用|現用|原本用|換掉)\s*([A-Za-z][A-Za-z0-9-]+)/g)].map((match) => match[1].toUpperCase()));
+  const latin = [...new Set((value.match(/\b[A-Z][A-Za-z0-9-]{2,}\b/g) || []).filter((word) => !LATIN_NOISE.has(word.toUpperCase()) && !competitor.has(word.toUpperCase())))];
+  const chinese = [...new Set(value.match(PRODUCT_TERMS) || [])];
+  return { terms: [...latin, ...chinese], name: [latin.join(" "), chinese.join("")].filter(Boolean).join(" ").slice(0, 30) };
+}
+
 export function parseCapture(model, text, { today } = {}) {
   const value = String(text || "");
+  const clauses = splitClauses(value);
   const candidates = matchCustomers(model, value);
   const top = candidates[0] || null;
-  const date = parseDate(value, today);
+  // "今天" is the visit itself; closing words point to the deal's close date instead of a reminder.
+  const closeDate = clauses.filter((clause) => CLOSING.test(clause)).map((clause) => parseDate(clause, today)).filter(Boolean).pop() || null;
+  const reminder = clauses.filter((clause) => !CLOSING.test(clause)).map((clause) => parseDate(clause, today)).filter((date) => date && !/今天|今日/.test(date.text)).pop() || null;
   const objections = OBJECTION_WORDS.filter(([, pattern]) => pattern.test(value)).map(([id]) => id);
   const reaction = REACTIONS.find(([, pattern]) => pattern.test(value))?.[0] || "";
   const channel = CHANNELS.find(([, pattern]) => pattern.test(value))?.[0] || "";
   const openOpportunities = top ? (model.opportunitiesByCustomer.get(top.customer.id) || []).filter((opportunity) => ["接觸", "提案", "議價"].includes(opportunity.stage)) : [];
+  const products = parseProducts(value);
+  const mentions = (opportunity) => products.terms.some((term) => [opportunity.name, opportunity.product, opportunity.notes, opportunity.nextAction].join(" ").toLowerCase().includes(term.toLowerCase()));
+  // An open case that mentions the product wins; with a single open case, update it rather
+  // than start a duplicate. A new one is suggested only when nothing open fits.
+  const existing = openOpportunities.find(mentions) || (openOpportunities.length === 1 ? openOpportunities[0] : null);
+  const create = !existing && Boolean(top) && products.terms.length > 0 && BUYING_INTENT.test(value);
   return {
     text: value,
     candidates,
@@ -163,9 +196,15 @@ export function parseCapture(model, text, { today } = {}) {
     reaction,
     objections,
     nextAction: parseNextAction(value),
-    nextFollowUpDate: date?.date || "",
-    dateText: date?.text || "",
-    opportunityId: openOpportunities.length === 1 ? openOpportunities[0].id : "",
+    // Nothing said about when to follow up: suggest one week later (shown as a suggestion).
+    nextFollowUpDate: reminder?.date || (top ? addWorkdays(today, 7) : ""),
+    dateText: reminder?.text || (top ? "沒提到，先排一週後" : ""),
+    reminderSuggested: !reminder,
+    opportunityMode: existing ? "update" : create ? "create" : "",
+    opportunityId: existing?.id || "",
+    opportunityName: create ? products.name : "",
+    opportunityCloseDate: closeDate?.date || "",
+    closeDateText: closeDate?.text || "",
   };
 }
 
@@ -186,8 +225,11 @@ export function saveCapture(db, fields, { requestId, today, fallbackChannel = "�
     nextAction: fields.nextAction || "",
     nextFollowUpDate: fields.noReminder ? "" : fields.nextFollowUpDate,
     followUpMode: fields.noReminder ? "none" : "",
-    opportunityAction: fields.opportunityId ? "update" : "none",
-    opportunityId: fields.opportunityId || "",
+    opportunityAction: fields.opportunityMode === "create" ? "create" : fields.opportunityId ? "update" : "none",
+    opportunityId: fields.opportunityMode === "create" ? "" : fields.opportunityId || "",
+    opportunityName: fields.opportunityName || "",
+    opportunityStage: fields.opportunityMode === "create" ? "接觸" : "",
+    opportunityCloseDate: fields.opportunityCloseDate || "",
     postVisitActions: suggestsPostVisitActions({ channel, purpose: fields.purpose }) ? "yes" : "",
     ...Object.fromEntries(Object.entries(fields).filter(([key]) => key.startsWith("prep."))),
   };

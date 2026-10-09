@@ -3,6 +3,7 @@ import { requestId } from "../../core/ids.js";
 import { presetDate } from "../../data/activities.js";
 import { parseCapture, saveCapture } from "../../data/capture.js";
 import { searchCustomers } from "../../data/customers.js";
+import { snippet } from "../../data/search.js";
 import { createDraftStore } from "../../data/drafts.js";
 import { customerIdentity, primaryContact } from "../../data/model.js";
 import { chipGroup, field, h, input, select, showErrors, toast } from "../dom.js";
@@ -24,9 +25,9 @@ export function renderCapture(ctx, route) {
   const draftKey = captureDraftKey(routeCustomer);
   // What the user set by hand wins over anything the rules guess later.
   const touched = new Set();
-  const state = { customerId: routeCustomer, contactId: routeCustomer ? primaryContact(ctx.model, routeCustomer)?.id || "" : "", channel: "", reaction: "", nextAction: "", nextFollowUpDate: "", noReminder: false, opportunityId: route.query.get("opportunity") || "", candidates: [], prep: {} };
+  const state = { customerId: routeCustomer, contactId: routeCustomer ? primaryContact(ctx.model, routeCustomer)?.id || "" : "", channel: "", reaction: "", nextAction: "", nextFollowUpDate: "", noReminder: false, opportunityId: route.query.get("opportunity") || "", opportunityMode: route.query.get("opportunity") ? "update" : "", opportunityName: "", opportunityCloseDate: "", reminderSuggested: false, candidates: [], prep: {} };
   if (routeCustomer) touched.add("customerId");
-  if (state.opportunityId) touched.add("opportunityId");
+  if (state.opportunityId) touched.add("opportunity");
 
   const form = h("form", { className: "capture stack", novalidate: true, dataset: { form: "capture" } });
   const text = h("textarea", { name: "detailedNote", rows: 6, dataset: { captureText: "" }, placeholder: "像傳 LINE 一樣寫：\n某某食品王副理說報價比原廠貴 15%，廠長要看人力節省試算，下週二前給\n\n手機鍵盤上的麥克風可以直接用講的。", "aria-label": "這次聯絡的內容" });
@@ -46,14 +47,17 @@ export function renderCapture(ctx, route) {
   const applyGuess = () => {
     const guess = parseCapture(ctx.model, text.value, { today });
     state.candidates = guess.candidates;
-    for (const key of ["customerId", "channel", "reaction", "nextAction", "nextFollowUpDate", "opportunityId"]) {
+    for (const key of ["customerId", "channel", "reaction", "nextAction", "nextFollowUpDate", "opportunityCloseDate"]) {
       if (!touched.has(key) && guess[key] !== undefined) state[key] = guess[key];
     }
+    if (!touched.has("nextFollowUpDate")) state.reminderSuggested = guess.reminderSuggested;
+    // Which opportunity (or a new one) moves together as one choice.
+    if (!touched.has("opportunity")) Object.assign(state, { opportunityMode: guess.opportunityMode, opportunityId: guess.opportunityId, opportunityName: guess.opportunityName });
     if (!touched.has("contactId")) {
       const top = guess.candidates.find((candidate) => candidate.customer.id === state.customerId);
       state.contactId = top?.contact?.id || (state.customerId ? primaryContact(ctx.model, state.customerId)?.id || "" : "");
     }
-    if (!touched.has("opportunityId") && state.opportunityId && ctx.model.opportunitiesById.get(state.opportunityId)?.customerId !== state.customerId) state.opportunityId = "";
+    if (!touched.has("opportunity") && state.opportunityId && ctx.model.opportunitiesById.get(state.opportunityId)?.customerId !== state.customerId) Object.assign(state, { opportunityMode: "", opportunityId: "" });
     drawPreview();
   };
 
@@ -78,6 +82,27 @@ export function renderCapture(ctx, route) {
     ]);
   };
 
+  // One choice for the case this note belongs to: none, a new one, or an existing one.
+  const opportunityPicker = (open) => {
+    const value = state.opportunityMode === "create" ? "new" : state.opportunityId || "";
+    const choice = select("opportunityChoice", [{ value: "", label: "不處理商機" }, { value: "new", label: "＋ 建立新商機" }, ...open.map((item) => ({ value: item.id, label: `更新：${snippet(item.name, "", 24)}（${item.stage}）` }))], value);
+    choice.addEventListener("change", () => {
+      touched.add("opportunity");
+      Object.assign(state, choice.value === "new" ? { opportunityMode: "create", opportunityId: "" } : choice.value ? { opportunityMode: "update", opportunityId: choice.value } : { opportunityMode: "", opportunityId: "" });
+      persist();
+      drawPreview();
+    });
+    const name = input("opportunityName", state.opportunityName, { placeholder: "例如：VIDAS 沙門氏菌儀器" });
+    name.addEventListener("input", () => { state.opportunityName = name.value; touched.add("opportunity"); persist(); });
+    const chosen = state.opportunityMode === "update" ? ctx.model.opportunitiesById.get(state.opportunityId) : null;
+    const close = input("opportunityCloseDate", state.opportunityCloseDate, { type: "date", min: today });
+    close.addEventListener("change", () => set("opportunityCloseDate", close.value));
+    return h("div", { className: "stack", dataset: { captureOpportunity: "" } }, [
+      field("商機", choice),
+      state.opportunityMode === "create" ? field("新商機名稱", name) : null,
+      state.opportunityMode ? field(chosen?.expectedCloseDate && !state.opportunityCloseDate ? `預計結案日（目前 ${chosen.expectedCloseDate}，空白＝不變）` : "預計結案日", close) : null,
+    ]);
+  };
   const drawPreview = () => {
     const customer = ctx.model.customersById.get(state.customerId);
     const contacts = customer ? ctx.model.contactsByCustomer.get(customer.id) || [] : [];
@@ -93,8 +118,7 @@ export function renderCapture(ctx, route) {
     const date = input("nextFollowUpDate", state.nextFollowUpDate, { type: "date", min: today, disabled: state.noReminder });
     date.addEventListener("change", () => set("nextFollowUpDate", date.value));
     const noReminder = h("input", { type: "checkbox", name: "noReminder", checked: state.noReminder, onChange: (event) => set("noReminder", event.target.checked) });
-    const opportunity = open.length ? select("opportunityId", [{ value: "", label: "不更新商機" }, ...open.map((item) => ({ value: item.id, label: `更新：${item.name}（${item.stage}）` }))], state.opportunityId) : null;
-    opportunity?.addEventListener("change", () => set("opportunityId", opportunity.value));
+    const opportunityBlock = customer ? opportunityPicker(open) : null;
     preview.replaceChildren(
       h("h2", { text: "幫你整理成這樣" }),
       h("p", { className: "muted", text: "看一眼，不對的地方改掉再儲存。你寫的原文會完整保存。" }),
@@ -104,12 +128,12 @@ export function renderCapture(ctx, route) {
       h("div", { className: "field", dataset: { field: "reaction" } }, [h("span", { className: "field-label", text: "客戶反應" }), reaction]),
       field("下一步", next),
       h("div", { className: "field", dataset: { field: "nextFollowUpDate" } }, [
-        h("span", { className: "field-label", text: state.nextFollowUpDate ? `提醒：${formatShortDate(state.nextFollowUpDate)} 週${weekdayLabel(state.nextFollowUpDate)}` : "提醒日期" }),
+        h("span", { className: "field-label", text: state.nextFollowUpDate ? `提醒：${formatShortDate(state.nextFollowUpDate)} 週${weekdayLabel(state.nextFollowUpDate)}${state.reminderSuggested ? "（沒提到日期，先排一週後）" : ""}` : "提醒日期" }),
         h("div", { className: "chip-group" }, QUICK_DATES.map(([label, days]) => h("button", { type: "button", className: "small ghost", dataset: { quickDate: days }, text: label, onClick: () => { state.noReminder = false; set("nextFollowUpDate", presetDate(today, days)); } }))),
         date,
         h("label", { className: "chip" }, [noReminder, h("span", { text: "不需提醒" })]),
       ]),
-      opportunity ? field("商機", opportunity) : null,
+      opportunityBlock,
     );
   };
 
@@ -138,6 +162,9 @@ export function renderCapture(ctx, route) {
       const errors = { ...result.errors };
       if (errors.nextFollowUpDate) errors.nextFollowUpDate = "選一個提醒日期，或勾「不需提醒」";
       if (errors.customerId) errors.customerId = "還不知道是哪一家客戶，請選一下";
+      for (const [from, to] of [["opportunity.name", "opportunityName"], ["opportunity.expectedCloseDate", "opportunityCloseDate"], ["opportunity.id", "opportunityChoice"]]) {
+        if (errors[from]) { errors[to] = from === "opportunity.name" ? "新商機要取個名字" : errors[from]; delete errors[from]; }
+      }
       showErrors(form, errors);
       saveState.textContent = "還沒儲存：請看標紅的地方，內容都還在";
       return;
@@ -152,7 +179,7 @@ export function renderCapture(ctx, route) {
   drafts.get(draftKey).then((draft) => {
     if (!draft) return;
     const { detailedNote = "", touched: wasTouched = [], savedAt, ...rest } = draft;
-    for (const key of ["customerId", "contactId", "channel", "reaction", "nextAction", "nextFollowUpDate", "noReminder", "opportunityId"]) if (rest[key] !== undefined && (wasTouched.includes(key) || !text.value)) state[key] = rest[key];
+    for (const key of ["customerId", "contactId", "channel", "reaction", "nextAction", "nextFollowUpDate", "noReminder", "opportunityId", "opportunityMode", "opportunityName", "opportunityCloseDate"]) if (rest[key] !== undefined && (wasTouched.includes(key) || !text.value)) state[key] = rest[key];
     state.prep = rest.prep || {};
     wasTouched.forEach((key) => touched.add(key));
     if (detailedNote && !text.value) { text.value = detailedNote; saveState.textContent = `已接續上次的草稿（${new Date(savedAt).toLocaleString("zh-TW")}）`; }
