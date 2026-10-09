@@ -12,6 +12,17 @@ export function validateSyncConfig(config = {}) {
   return { ok: !Object.keys(errors).length, errors, values: { endpoint, clientId } };
 }
 
+// Pulls the two values out of a pasted setup link (or any text that contains them).
+export function parseSetupLink(text = "") {
+  const value = String(text || "");
+  const query = value.includes("?") ? value.slice(value.indexOf("?") + 1) : value;
+  let params;
+  try { params = new URLSearchParams(query); } catch { params = new URLSearchParams(); }
+  const endpoint = params.get("endpoint") || (value.match(/https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec/) || [])[0] || "";
+  const clientId = params.get("clientId") || (value.match(/[0-9A-Za-z-]+\.apps\.googleusercontent\.com/) || [])[0] || "";
+  return { endpoint: endpoint.trim(), clientId: clientId.trim() };
+}
+
 export async function deviceId(db) {
   let id = await db.getMeta("deviceId", null);
   if (!id) { id = `device-${uuid()}`; await db.setMeta("deviceId", id); }

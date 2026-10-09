@@ -1,7 +1,7 @@
 import { requestId } from "../../core/ids.js";
 import { editableValues } from "../../data/db.js";
 import { displayName } from "../../data/archive.js";
-import { connectSync, loadSyncConfig, saveSyncConfig } from "../../sync/setup.js";
+import { connectSync, loadSyncConfig, parseSetupLink, saveSyncConfig } from "../../sync/setup.js";
 import { badge, emptyState, field, formToObject, h, input, openDialog, showErrors, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { pageHeader } from "../shell.js";
@@ -94,15 +94,51 @@ export function renderSync(ctx) {
   return h("div", { className: "stack" }, [pageHeader("同步中心", "這台裝置與 Google Sheets 的同步狀態。"), summary, conflictList, failedList].filter(Boolean));
 }
 
+// Typed-but-unsaved values survive a phone reloading the page after switching apps.
+const DRAFT_KEY = "ocean-sync-connection-draft";
+const readDraft = () => { try { return JSON.parse(globalThis.localStorage?.getItem(DRAFT_KEY) || "{}") || {}; } catch { return {}; } };
+const writeDraft = (values) => { try { globalThis.localStorage?.setItem(DRAFT_KEY, JSON.stringify(values)); } catch { /* storage may be blocked; the form still works */ } };
+const clearDraft = () => { try { globalThis.localStorage?.removeItem(DRAFT_KEY); } catch { /* ignore */ } };
+// Per database, so one auto-connect at a time even if the page renders twice meanwhile.
+const autoConnecting = new WeakSet();
+
 function connectionSection(ctx) {
   const card = h("section", { className: "card form-card", dataset: { form: "sync-connection" } }, [h("h2", { text: "同步連線（Google Sheets）" }), h("p", { className: "muted", text: "載入中…" })]);
-  loadSyncConfig(ctx.db).then((config) => {
+  loadSyncConfig(ctx.db).then(async (config) => {
+    // A setup link (#/settings?endpoint=…&clientId=…) connects a new phone in one step; the values
+    // stay in the URL fragment and never reach the web host.
+    const fromLink = { endpoint: ctx.route.query.get("endpoint") || "", clientId: ctx.route.query.get("clientId") || "" };
+    if (!config && fromLink.endpoint && fromLink.clientId && !autoConnecting.has(ctx.db)) {
+      autoConnecting.add(ctx.db);
+      const saved = await saveSyncConfig(ctx.db, fromLink);
+      autoConnecting.delete(ctx.db);
+      if (saved.ok) {
+        clearDraft();
+        await connectSync(ctx, saved.value);
+        toast("已從設定連結帶入，請按下方按鈕登入 Google", { timeout: 8000 });
+        ctx.navigate("settings");
+        return;
+      }
+    }
+    const draft = readDraft();
+    const endpoint = input("endpoint", config?.endpoint || fromLink.endpoint || draft.endpoint || "", { placeholder: "https://script.google.com/macros/s/…/exec", inputmode: "url" });
+    const clientId = input("clientId", config?.clientId || fromLink.clientId || draft.clientId || "", { placeholder: "…apps.googleusercontent.com" });
+    const remember = () => writeDraft({ endpoint: endpoint.value, clientId: clientId.value });
+    endpoint.addEventListener("input", remember);
+    clientId.addEventListener("input", remember);
+    const paste = h("input", { type: "url", placeholder: "把整段設定連結貼在這裡", "aria-label": "貼上設定連結", dataset: { setupLink: "" } });
+    paste.addEventListener("input", () => {
+      const parsed = parseSetupLink(paste.value);
+      if (parsed.endpoint) endpoint.value = parsed.endpoint;
+      if (parsed.clientId) clientId.value = parsed.clientId;
+      if (parsed.endpoint || parsed.clientId) { remember(); paste.value = ""; toast("已從連結填入，按「儲存並連線」"); }
+    });
     const form = h("form", { className: "form-card", novalidate: true }, [
-      h("p", { className: "muted", text: "填入 Apps Script Web App 網址與 Google 用戶端 ID（設定方式見 ocean-gas/README.md）。這兩個值不是密碼，只存在這台裝置。" }),
+      h("p", { className: "muted", text: "填入 Apps Script Web App 網址與 Google 用戶端 ID。這兩個值不是密碼，只存在這台裝置。" }),
+      config ? null : field("最快：貼上設定連結", paste, { hint: "從 LINE 複製整段設定連結貼上，兩格會自動填好" }),
       h("p", { className: "field-error", hidden: true, dataset: { formErrors: "" } }),
-      // A setup link (#/settings?endpoint=…&clientId=…) pre-fills a new phone; the values stay in the fragment and never reach the web host.
-      field("Web App 網址", input("endpoint", config?.endpoint || ctx.route.query.get("endpoint") || "", { placeholder: "https://script.google.com/macros/s/…/exec", inputmode: "url" })),
-      field("Google 用戶端 ID", input("clientId", config?.clientId || ctx.route.query.get("clientId") || "", { placeholder: "…apps.googleusercontent.com" })),
+      field("Web App 網址", endpoint),
+      field("Google 用戶端 ID", clientId),
       h("div", { className: "form-actions" }, [h("button", { type: "submit", className: "primary", text: config ? "更新並重新連線" : "儲存並連線" })]),
     ]);
     const signIn = h("div", { dataset: { signIn: "" } });
@@ -120,6 +156,7 @@ function connectionSection(ctx) {
       event.preventDefault();
       const result = await saveSyncConfig(ctx.db, formToObject(form));
       if (!result.ok) { showErrors(form, result.errors); return; }
+      clearDraft();
       await connectSync(ctx, result.value);
       toast("已儲存同步連線");
       ctx.render();
