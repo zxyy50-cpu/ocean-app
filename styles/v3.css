@@ -17,6 +17,7 @@
 .action-card { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-decoration: none; }
 .action-card.is-late { border-left: 4px solid var(--warn); border-radius: 0 var(--radius) var(--radius) 0; }
 .action-card.compact { grid-template-columns: 1fr; }
+.action-card > .badge { align-self: start; white-space: nowrap; }
 .action-main { display: flex; flex-direction: column; gap: 2px; color: inherit; text-decoration: none; min-width: 0; }
 .action-main strong { font-size: 1.02rem; }
 .action-main span, .action-main small { overflow-wrap: anywhere; }

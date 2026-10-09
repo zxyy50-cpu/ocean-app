@@ -1,8 +1,8 @@
 // Offline shell: same-origin GET requests are served network-first and cached,
 // so the APP opens without a connection after one online visit.
 // Customer data never passes through here; it lives in IndexedDB.
-const CACHE = "ocean-app-shell-v3";
-const SHELL = ["./", "./index.html", "./classic.html", "./styles/app.css", "./styles/v3.css", "./src/main.js", "./src/main-classic.js", "./manifest.webmanifest"];
+const CACHE = "ocean-app-shell-v4";
+const SHELL = ["./", "./index.html", "./classic.html", "./styles/app.css", "./styles/v3.css", "./styles/themes.css", "./src/main.js", "./src/main-classic.js", "./manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));

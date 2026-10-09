@@ -8,6 +8,12 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/v3.css">
+  <link rel="stylesheet" href="./styles/themes.css">
+  <script>
+    // Apply the chosen skin before first paint (default: 夏日繽紛).
+    try { var skin = localStorage.getItem("ocean-skin") || "summer"; if (skin !== "classic") document.documentElement.setAttribute("data-skin", skin); }
+    catch (error) { document.documentElement.setAttribute("data-skin", "summer"); }
+  </script>
 </head>
 <body>
   <div id="app"><p style="padding:24px">載入中…</p></div>

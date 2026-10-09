@@ -1,0 +1,97 @@
+/* Skins: one attribute on <html data-skin="…"> swaps the palette. Each skin only overrides
+   the tokens from app.css (plus a few accents), so all skins together stay a few KB. */
+
+/* 夏日繽紛 — sky to sea, sunny buttons, watermelon alerts */
+:root[data-skin="summer"] {
+  --bg: #eef9fd;
+  --surface: #ffffff;
+  --surface-2: #f6fcff;
+  --ink: #12304a;
+  --muted: #5b7488;
+  --line: #d6ecf4;
+  --accent: #0c9dc0;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcf3fa;
+  --warn: #d9502c;
+  --warn-soft: #ffe8e0;
+  --ok: #129b6a;
+  --ok-soft: #dcf6ec;
+  --info: #5a52d6;
+  --info-soft: #ecebff;
+  --sun: #ffb21f;
+  --sun-ink: #3b2600;
+  --melon: #ff6b8a;
+  --leaf: #22c3a6;
+  --hero: linear-gradient(135deg, #22b7e0 0%, #2fd3c0 100%);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 1px 2px rgba(18, 48, 74, 0.05), 0 8px 22px rgba(12, 157, 192, 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="summer"]:not([data-theme="light"]) {
+    --bg: #0b1a24; --surface: #11242f; --surface-2: #14303d; --ink: #e6f4fa; --muted: #93b4c4; --line: #1f3a48;
+    --accent: #3fd0ef; --accent-ink: #062431; --accent-soft: #123947; --warn: #ff9a7d; --warn-soft: #3a1f19;
+    --ok: #5fe0b4; --ok-soft: #12352b; --sun: #ffc24d; --sun-ink: #3b2600; --melon: #ff8aa3; --leaf: #3fe0c4;
+    --hero: linear-gradient(135deg, #0f6f8c 0%, #11786d 100%); --shadow: none;
+  }
+}
+
+/* 溫暖手帳 — paper, ink and a terracotta stamp */
+:root[data-skin="notebook"] {
+  --bg: #f5efe3; --surface: #fffbf3; --surface-2: #fbf5e9; --ink: #2b2a33; --muted: #85796a; --line: #e2d7c3;
+  --accent: #b5523b; --accent-ink: #ffffff; --accent-soft: #f6e2d9; --warn: #a3561a; --warn-soft: #f7e6d2;
+  --ok: #5e7a5a; --ok-soft: #e5ecdf; --sun: #2b2a33; --sun-ink: #f5efe3; --melon: #b5523b; --leaf: #5e7a5a;
+  --hero: #2b2a33; --radius: 12px; --radius-sm: 8px; --shadow: none;
+  --heading-font: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="notebook"]:not([data-theme="light"]) {
+    --bg: #1d1b19; --surface: #26231f; --surface-2: #2c2924; --ink: #efe6d6; --muted: #a8998a; --line: #3a352e;
+    --accent: #e08a6f; --accent-ink: #2b1209; --accent-soft: #3d2a22; --hero: #3a352e; --sun: #efe6d6; --sun-ink: #1d1b19;
+  }
+}
+
+/* 深色駕駛艙 — always dark, mint numbers */
+:root[data-skin="cockpit"] {
+  --bg: #0e151b; --surface: #16202a; --surface-2: #1a2632; --ink: #e8eef2; --muted: #8597a4; --line: #24313b;
+  --accent: #4fe3b5; --accent-ink: #062b20; --accent-soft: #143a31; --warn: #f5b547; --warn-soft: #3a2c12;
+  --danger: #ff8a7a; --danger-soft: #3d1d1a; --ok: #4fe3b5; --ok-soft: #143a31; --info: #7fb2ff; --info-soft: #18283f;
+  --sun: #4fe3b5; --sun-ink: #062b20; --melon: #f5b547; --leaf: #4fe3b5; --hero: #16202a; --shadow: none;
+  color-scheme: dark;
+}
+
+/* 活力品牌 — a bold blue header and a coral action button */
+:root[data-skin="bold"] {
+  --bg: #eef1fa; --surface: #ffffff; --surface-2: #f6f8fe; --ink: #1b2140; --muted: #626a8c; --line: #dce1f2;
+  --accent: #2e3fb8; --accent-ink: #ffffff; --accent-soft: #e3e7fb; --warn: #c2410c; --warn-soft: #ffedd5;
+  --sun: #ff6b4a; --sun-ink: #ffffff; --melon: #ff6b4a; --leaf: #2e3fb8; --hero: #2e3fb8; --radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="bold"]:not([data-theme="light"]) {
+    --bg: #0f1226; --surface: #181c36; --surface-2: #1d2240; --ink: #e7e9f7; --muted: #9aa0c2; --line: #2a2f52;
+    --accent: #8d9bff; --accent-ink: #0f1226; --accent-soft: #252b55; --hero: #232a6b; --shadow: none;
+  }
+}
+
+/* Shared skin touches (only where a skin defines them). */
+:root[data-skin] .home-head { background: var(--hero, transparent); color: #fff; padding: 18px 16px; border-radius: var(--radius); }
+:root[data-skin] .home-head .muted { color: rgba(255, 255, 255, 0.85); }
+:root[data-skin] .home-progress { background: rgba(255, 255, 255, 0.22); color: #fff; }
+:root[data-skin="cockpit"] .home-head { border: 1px solid var(--line); }
+:root[data-skin] .bottom-nav .nav-primary .nav-icon { background: var(--sun); color: var(--sun-ink); }
+:root[data-skin="summer"] .capture-entry { background: var(--hero); }
+:root[data-skin="summer"] .action-card:nth-of-type(4n + 1) { border-left: 5px solid var(--accent); }
+:root[data-skin="summer"] .action-card:nth-of-type(4n + 2) { border-left: 5px solid var(--sun); }
+:root[data-skin="summer"] .action-card:nth-of-type(4n + 3) { border-left: 5px solid var(--melon); }
+:root[data-skin="summer"] .action-card:nth-of-type(4n + 4) { border-left: 5px solid var(--leaf); }
+:root[data-skin="summer"] .action-card.is-late { border-left-color: var(--melon); }
+:root[data-skin="notebook"] h1, :root[data-skin="notebook"] h2, :root[data-skin="notebook"] .action-main strong { font-family: var(--heading-font); font-weight: 600; }
+:root[data-skin="notebook"] .action-card { border-left: 4px solid var(--accent); border-radius: 4px var(--radius) var(--radius) 4px; }
+:root[data-skin="notebook"] .bottom-nav { border-top-style: dashed; }
+
+/* Appearance picker in 設定 */
+.skin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.skin-option { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 8px; padding: 10px; border: 2px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); cursor: pointer; text-align: left; font: inherit; }
+.skin-option[aria-pressed="true"] { border-color: var(--accent); }
+.skin-swatch { display: flex; align-self: stretch; width: 100%; height: 26px; border-radius: 6px; overflow: hidden; }
+.skin-swatch i { flex: 1; }
