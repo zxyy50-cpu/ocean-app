@@ -6,6 +6,7 @@ import { opportunityTitle } from "../../data/products.js";
 import { badge, emptyState, h, money, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { openArchiveCustomer, openCustomerEditor } from "../forms/customer-forms.js";
+import { openMergeGroupDialog } from "../forms/merge-group.js";
 import { contactsCard, nextStepCard, noteBlock, opportunitiesCard, ordersCard, qualificationCard, quickContact, relationshipCard, toolkitCard } from "../pages/customer.js";
 
 const TABS = [["timeline", "時間軸"], ["opportunities", "商機"], ["orders", "訂單"], ["contacts", "聯絡人"], ["info", "資料"]];
@@ -96,7 +97,10 @@ export function renderFolder(ctx, route) {
         ]),
       ]),
     ]),
-    duplicates.length ? h("a", { className: "summary-line warn", href: `#/merge?primary=${encodeURIComponent(customer.id)}&secondary=${encodeURIComponent(duplicates[0].id)}`, dataset: { folderDuplicates: "" } }, [h("span", { text: `可能還有 ${duplicates.length} 筆同一家的資料` }), h("span", { text: "比較／合併 →" })]) : null,
+    duplicates.length ? h("button", { type: "button", className: "summary-line warn", dataset: { folderDuplicates: "" }, onClick: () => {
+      const group = [customer, ...duplicates.map((item) => ctx.model.customersById.get(item.id)).filter(Boolean)];
+      openMergeGroupDialog(ctx, group, { onDone: (keepId) => ctx.navigate(`customer/${encodeURIComponent(keepId)}`) });
+    } }, [h("span", { text: `可能還有 ${duplicates.length} 筆同一家的資料` }), h("span", { text: "整理 →" })]) : null,
   ]);
 
   const counts = { opportunities: open.length, orders: (ctx.model.ordersByCustomer.get(customer.id) || []).length, contacts: (ctx.model.contactsByCustomer.get(customer.id) || []).length };

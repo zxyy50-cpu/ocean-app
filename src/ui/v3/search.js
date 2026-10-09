@@ -1,5 +1,6 @@
 import { globalSearch, snippet } from "../../data/search.js";
 import { opportunityTitle } from "../../data/products.js";
+import { openMergeGroupDialog } from "../forms/merge-group.js";
 import { customerIdentity } from "../../data/model.js";
 import { badge, emptyState, h, money } from "../dom.js";
 import { registerPage } from "../app.js";
@@ -49,11 +50,20 @@ export function renderSearch(ctx, route) {
     const query = state.query;
     if (!query.trim()) { results.replaceChildren(recent(ctx)); return; }
     const found = globalSearch(ctx.model, query, { myAreas: ctx.settings.myAreas, today: ctx.today() });
+    // Same-name records get one 「整理」 button (on the first of them shown).
+    const offered = new Set();
+    const tidyButton = (customer) => {
+      const twins = ctx.model.sameNameGroup(customer);
+      const key = twins.map((item) => item.id).sort().join(",");
+      if (twins.length < 2 || offered.has(key)) return null;
+      offered.add(key);
+      return h("button", { type: "button", className: "small ghost", dataset: { tidyGroup: customer.id }, text: `同名 ${twins.length} 筆・整理`, onClick: () => openMergeGroupDialog(ctx, twins, { onDone: () => { ctx.rebuild(); draw(); } }) });
+    };
     const sections = [
-      group("客戶", found.totals.customers, found.customers.length, found.customers.map(({ customer, outsideMyAreas }) => h("li", {}, [h("a", { href: `#/customer/${encodeURIComponent(customer.id)}` }, [
+      group("客戶", found.totals.customers, found.customers.length, found.customers.map(({ customer, outsideMyAreas }) => h("li", { className: "result-with-action" }, [h("a", { href: `#/customer/${encodeURIComponent(customer.id)}` }, [
         h("strong", {}, highlight(customer.name, query)),
         h("small", { className: "muted", text: [customerIdentity(ctx.model, customer), outsideMyAreas ? "非我的區域" : ""].filter(Boolean).join("・") }),
-      ])]))),
+      ]), tidyButton(customer)]))),
       group("拜訪內容", found.totals.activities, found.activities.length, found.activities.map(({ activity, text }) => h("li", {}, [h("a", { href: `#/customer/${encodeURIComponent(activity.customerId)}` }, [
         h("strong", { text: `${ctx.model.customerName(activity.customerId)}・${activity.activityDate} ${activity.channel || ""}` }),
         h("span", {}, highlight(text, query)),

@@ -32,6 +32,12 @@
 .result-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .result-rows li { border-bottom: 1px solid var(--line); }
 .result-rows li:last-child { border-bottom: 0; }
+.result-rows li.result-with-action { display: flex; align-items: center; gap: 8px; }
+.result-rows li.result-with-action > a { flex: 1; min-width: 0; }
+.merge-members { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.merge-member { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+.merge-member-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.merge-member-choices { display: flex; flex-wrap: wrap; gap: 8px; }
 .result-rows a, .result-rows li > strong { display: flex; flex-direction: column; gap: 2px; padding: 10px 2px; color: var(--ink); text-decoration: none; }
 .result-rows li > strong + small { display: block; padding: 0 2px 10px; }
 .result-rows mark, .capture mark { background: var(--warn-soft); color: inherit; border-radius: 3px; padding: 0 2px; }

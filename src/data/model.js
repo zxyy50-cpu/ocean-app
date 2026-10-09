@@ -35,9 +35,10 @@ export function buildModel(all) {
   };
   model.customerName = (id) => model.customersById.get(id)?.name || "（未知客戶）";
   // How many other active customers share this company name (used to tell twins apart).
-  const nameCounts = new Map();
-  customers.forEach((customer) => { const key = companyKey(customer.name); if (key) nameCounts.set(key, (nameCounts.get(key) || 0) + 1); });
-  model.sameNameCount = (customer) => Math.max(0, (nameCounts.get(companyKey(customer?.name)) || 1) - 1);
+  const nameGroups = new Map();
+  customers.forEach((customer) => { const key = companyKey(customer.name); if (key) nameGroups.set(key, [...(nameGroups.get(key) || []), customer]); });
+  model.sameNameCount = (customer) => Math.max(0, (nameGroups.get(companyKey(customer?.name)) || [customer]).length - 1);
+  model.sameNameGroup = (customer) => nameGroups.get(companyKey(customer?.name)) || [customer];
   model.openOpportunities = active("opportunity").filter((opportunity) => OPEN_OPPORTUNITY_STAGES.includes(opportunity.stage));
   return model;
 }

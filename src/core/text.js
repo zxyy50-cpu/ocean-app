@@ -1,4 +1,6 @@
-const COMPANY_SUFFIX = /(股份有限公司|有限公司|股份公司|企業社|公司)$/u;
+// "X股份有限公司大寮廠" and "X大寮廠" are the same plant, so the legal form goes wherever it sits.
+const LEGAL_FORM = /股份有限公司|有限公司|股份公司/gu;
+const COMPANY_SUFFIX = /(企業社|公司)$/u;
 
 // Keeps what the user typed (full-width punctuation, 臺) and only trims.
 export function cleanText(value) {
@@ -16,7 +18,7 @@ export function comparisonKey(value) {
 }
 
 export function companyKey(value) {
-  return comparisonKey(value).replace(COMPANY_SUFFIX, "");
+  return comparisonKey(value).replace(LEGAL_FORM, "").replace(COMPANY_SUFFIX, "");
 }
 
 export function splitList(value) {

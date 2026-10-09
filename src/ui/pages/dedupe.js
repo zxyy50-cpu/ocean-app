@@ -4,6 +4,9 @@ import { impactLabel } from "../../data/merge.js";
 import { customerIdentity } from "../../data/model.js";
 import { badge, confirmDialog, emptyState, h, toast } from "../dom.js";
 import { registerPage } from "../app.js";
+import { duplicateGroups } from "../../data/customers.js";
+import { customerInAreas } from "../../data/tags.js";
+import { openMergeGroupDialog } from "../forms/merge-group.js";
 import { pageHeader } from "../shell.js";
 
 const state = { mineOnly: true, limit: 30, running: false };
@@ -78,11 +81,30 @@ export function renderDedupe(ctx) {
 
   return h("div", { className: "stack" }, [
     pageHeader("整理同名客戶", "同一家公司在不同表格各記了一筆。勾選確認後才合併，每一筆都能復原。"),
-    h("div", { className: "info-banner" }, [h("span", { text: `建議合併 ${suggestions.length} 組：每組只有一筆有客戶編號，保留那一筆。另有 ${skippedSeveralNumbers} 組有多個不同客戶編號（可能是不同廠區）、${skippedNoNumber} 組都沒有編號，不列入建議，請在「封存與復原 → 重複檢查」人工判斷。` })]),
+    h("div", { className: "info-banner" }, [h("span", { text: `建議合併 ${suggestions.length} 組：每組只有一筆有客戶編號，保留那一筆。另有 ${skippedSeveralNumbers} 組有多個不同客戶編號（可能是不同廠區）、${skippedNoNumber} 組都沒有編號，列在最下面讓你逐組決定。` })]),
     h("div", { className: "button-row" }, [mine, shown.length ? selectAll : null, runButton]),
     progress,
     shown.length ? h("div", { className: "stack" }, shown.map((suggestion) => groupCard(ctx, suggestion, selected))) : h("section", { className: "card" }, [emptyState(state.mineOnly ? "我的區域沒有需要整理的同名客戶" : "沒有需要整理的同名客戶", state.mineOnly ? "可以取消「只看我的區域」看看其他區域。" : "")]),
     suggestions.length > state.limit ? h("button", { type: "button", className: "ghost", text: `顯示更多（還有 ${suggestions.length - state.limit} 組）`, onClick: () => { state.limit += 30; ctx.render(); } }) : null,
+    manualGroups(ctx),
+  ]);
+}
+
+// Groups the safe rule doesn't cover (no number, or several different numbers): one 整理 button each.
+function manualGroups(ctx) {
+  const suggested = new Set(mergeSuggestions(ctx.model, { myAreas: ctx.settings.myAreas, mineOnly: false }).suggestions.map((suggestion) => suggestion.primary.id));
+  const groups = duplicateGroups(ctx.model.customers)
+    .filter((members) => !members.some((customer) => suggested.has(customer.id)))
+    .filter((members) => !state.mineOnly || members.some((customer) => customerInAreas(customer, ctx.settings.myAreas)))
+    .sort((left, right) => right.length - left.length);
+  if (!groups.length) return null;
+  return h("section", { className: "card", dataset: { manualGroups: "" } }, [
+    h("div", { className: "section-head" }, [h("h2", { text: "需要你決定的同名組" }), badge(`${groups.length} 組`)]),
+    h("p", { className: "muted", text: "沒有客戶編號，或有好幾個不同編號（可能是不同廠區）。點「整理」逐組選要保留哪一筆。" }),
+    h("ul", { className: "task-list" }, groups.slice(0, 60).map((members) => h("li", { className: "task-row", dataset: { manualGroup: members[0].id } }, [
+      h("div", { className: "task-main" }, [h("strong", { text: `${members[0].name}（${members.length} 筆）` }), h("small", { className: "muted", text: members.map((customer) => customer.customerNo ? `#${customer.customerNo}` : "無編號").join("、") })]),
+      h("button", { type: "button", className: "small primary", text: "整理", onClick: () => openMergeGroupDialog(ctx, members, { onDone: () => ctx.render() }) }),
+    ]))),
   ]);
 }
 

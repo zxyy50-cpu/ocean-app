@@ -15,6 +15,7 @@ import "./ui/pages/merge.js";
 import "./ui/pages/dedupe.js";
 import "./ui/pages/orders.js";
 import "./ui/pages/data-tools.js";
+import "./ui/pages/prospects-import.js";
 import "./ui/pages/sync.js";
 import "./ui/pages/kpi.js";
 import "./ui/pages/toolkit.js";
