@@ -30,6 +30,7 @@ import "./ui/v3/prep.js";
 import "./ui/v3/cases.js";
 import "./ui/v3/triage.js";
 import "./ui/v3/appearance.js";
+import "./ui/v3/plan.js";
 
 async function start() {
   const root = document.getElementById("app");

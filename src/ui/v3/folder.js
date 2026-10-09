@@ -1,11 +1,13 @@
 import { toDateOnly } from "../../core/dates.js";
 import { requestId } from "../../core/ids.js";
 import { duplicateCandidates, restoreCustomer, setImportant } from "../../data/customers.js";
+import { holdInfo, releaseHold } from "../../data/devplan.js";
 import { customerIdentity } from "../../data/model.js";
 import { opportunityTitle } from "../../data/products.js";
 import { badge, emptyState, h, money, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { openArchiveCustomer, openCustomerEditor } from "../forms/customer-forms.js";
+import { openHoldDialog } from "../forms/hold.js";
 import { openMergeGroupDialog } from "../forms/merge-group.js";
 import { contactsCard, nextStepCard, noteBlock, opportunitiesCard, ordersCard, qualificationCard, quickContact, relationshipCard, toolkitCard } from "../pages/customer.js";
 
@@ -72,6 +74,7 @@ export function renderFolder(ctx, route) {
   const customer = ctx.model.customersById.get(route.id);
   if (!customer) return emptyState("找不到這位客戶", "可能已被合併。", h("a", { className: "button primary", href: "#/search", text: "搜尋客戶" }));
   const tab = TABS.some(([value]) => value === route.query.get("tab")) ? route.query.get("tab") : "timeline";
+  const hold = holdInfo(customer, ctx.today());
   const duplicates = customer.archivedAt ? [] : duplicateCandidates(customer, ctx.model.customers, ctx.model.contactsByCustomer);
   const open = (ctx.model.opportunitiesByCustomer.get(customer.id) || []).filter((opportunity) => ["接觸", "提案", "議價"].includes(opportunity.stage));
   const prepHref = `#/prep/${encodeURIComponent(customer.id)}${open.length === 1 ? `?opportunity=${encodeURIComponent(open[0].id)}` : ""}`;
@@ -93,10 +96,15 @@ export function renderFolder(ctx, route) {
         h("div", { className: "more-actions-menu" }, [
           h("a", { className: "button small ghost", href: `#/opportunity/new?customer=${encodeURIComponent(customer.id)}`, text: "新商機" }),
           h("button", { type: "button", className: "small ghost", dataset: { editCustomer: "" }, text: "編輯資料", onClick: () => openCustomerEditor(ctx, { customer }) }),
+          hold ? null : h("button", { type: "button", className: "small ghost", dataset: { holdCustomer: "" }, text: "不開發", onClick: () => openHoldDialog(ctx, [customer], { onDone: () => ctx.render() }) }),
           h("button", { type: "button", className: "small ghost", dataset: { archiveCustomer: "" }, text: "封存", onClick: () => openArchiveCustomer(ctx, customer, { onDone: () => ctx.navigate("search") }) }),
         ]),
       ]),
     ]),
+    hold && !customer.archivedAt ? h("div", { className: "warning-banner", dataset: { holdBanner: "" } }, [
+      h("span", { text: `不開發：${hold.reason}${hold.until ? `（${hold.until} 再看${hold.active ? "" : "，已到期"}）` : ""}` }),
+      h("button", { type: "button", className: "small", dataset: { releaseHold: "" }, text: "取消不開發", onClick: async () => { await releaseHold(ctx.db, ctx.model, customer, requestId("release-hold")); toast("已取消不開發，會回到開發計畫"); } }),
+    ]) : null,
     duplicates.length ? h("button", { type: "button", className: "summary-line warn", dataset: { folderDuplicates: "" }, onClick: () => {
       const group = [customer, ...duplicates.map((item) => ctx.model.customersById.get(item.id)).filter(Boolean)];
       openMergeGroupDialog(ctx, group, { onDone: (keepId) => ctx.navigate(`customer/${encodeURIComponent(keepId)}`) });

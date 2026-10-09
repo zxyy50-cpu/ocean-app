@@ -43,19 +43,19 @@ function prospectsCard(ctx) {
     region.replaceChildren(
       h("ul", { className: "count-list" }, [
         h("li", {}, [h("span", { text: "新增客戶" }), h("strong", { text: String(plan.add.length) })]),
-        h("li", {}, [h("span", { text: "替既有客戶補資料（統編、地址、工業區）" }), h("strong", { text: String(plan.enrich.length) })]),
+        h("li", {}, [h("span", { text: "替既有客戶補資料（統編、地址、工業區、資本額）" }), h("strong", { text: String(plan.enrich.length) })]),
         h("li", {}, [h("span", { text: "名稱相近，請你判斷" }), h("strong", { text: String(plan.similar.length) })]),
         h("li", {}, [h("span", { text: "已有、資料也相同（略過）" }), h("strong", { text: String(plan.unchanged + plan.skipped) })]),
       ]),
       h("div", { className: "tags", dataset: { prospectAreas: "" } }, areas.map(([area, count]) => badge(`${area} ${count}`))),
-      similarList,
+      ...(similarList ? [similarList] : []),
       h("div", { className: "button-row" }, [go]),
       progress,
     );
   });
   return h("section", { className: "card form-card", dataset: { section: "prospects" } }, [
     h("h2", { text: "匯入嘉雲高屏工廠與開發名單" }),
-    h("p", { className: "muted", text: "來源：經濟部「登記工廠名錄」（食品、飲料、藥品、化粧品工廠）＋你的開發名單。有工業區的標工業區，其餘標縣市。匯入前會先列出新增、補資料、相近名稱，確認後才寫入。" }),
+    h("p", { className: "muted", text: "來源：經濟部「登記工廠名錄」（食品、飲料、藥品、化粧品工廠）＋你的開發名單＋財政部稅籍資料的資本額。有工業區的標工業區，其餘標縣市。匯入前會先列出新增、補資料、相近名稱，確認後才寫入。" }),
     h("div", { className: "button-row" }, [button]),
     region,
   ]);

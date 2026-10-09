@@ -28,7 +28,8 @@ export function buildToday(model, { today, myAreas = [] } = {}) {
   const liveCustomer = (id) => { const customer = model.customersById.get(id); return Boolean(customer && !customer.archivedAt); };
   const reminders = (model.all.reminder || []).filter((reminder) => !reminder.archivedAt && liveCustomer(reminder.customerId));
   const open = reminders.filter((reminder) => reminder.status !== "完成");
-  const customerFollowUps = model.customers.filter((customer) => customer.nextFollowUpDate && customer.nextFollowUpDate <= today);
+  // A 「不開發」 customer's date means "look again in the 開發計畫", not a follow-up for today.
+  const customerFollowUps = model.customers.filter((customer) => customer.nextFollowUpDate && customer.nextFollowUpDate <= today && customer.relationStatus !== "不開發");
   // Any open reminder owns the customer's follow-up, so postponing it doesn't
   // resurface the older date stored on the customer record.
   const coveredByReminder = new Set(open.filter((reminder) => reminder.dueDate).map((reminder) => reminder.customerId));

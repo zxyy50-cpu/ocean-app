@@ -11,6 +11,7 @@ export const MAIN_ITEMS = Object.freeze([
 ]);
 
 export const MORE_ITEMS = Object.freeze([
+  { name: "plan", label: "開發計畫", icon: "➚" },
   { name: "customers", label: "客戶探索", icon: "◇" },
   { name: "opportunities", label: "商機清單", icon: "▦" },
   { name: "orders", label: "訂單與首購", icon: "▢" },

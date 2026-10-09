@@ -34,6 +34,33 @@
 .result-rows li:last-child { border-bottom: 0; }
 .result-rows li.result-with-action { display: flex; align-items: center; gap: 8px; }
 .result-rows li.result-with-action > a { flex: 1; min-width: 0; }
+.plan-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.plan-filters select { width: auto; max-width: 100%; }
+.plan-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.plan-card { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.plan-card > input { margin-top: 4px; }
+.plan-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.plan-name { color: var(--ink); text-decoration: none; }
+.plan-reasons { color: var(--ink); }
+.plan-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.plan-badges:empty { display: none; }
+.plan-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.plan-score { min-width: 44px; text-align: center; font-weight: 700; font-size: 1.1rem; padding: 4px 8px; border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent); }
+.plan-score.tier-低, .plan-score.tier-不明 { background: var(--bg); color: var(--muted); }
+.plan-bulk { position: sticky; top: 8px; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--warn-soft); }
+.plan-bulk[hidden] { display: none; }
+.funnel-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.funnel-table th, .funnel-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.funnel-table td.num { text-align: right; }
+.funnel-table .county-row th, .funnel-table .county-row td { background: var(--accent-soft); font-weight: 600; }
+.funnel-table .zone-row th { padding-left: 22px; font-weight: 400; }
+.funnel-table .link-button { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; text-align: left; }
+.funnel-table .bar { height: 4px; margin-top: 4px; border-radius: 2px; background: var(--line); min-width: 80px; }
+.funnel-table .bar span { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+@media (max-width: 520px) {
+  .plan-card { grid-template-columns: auto 1fr; }
+  .plan-side { grid-column: 2; flex-direction: row; align-items: center; justify-content: flex-start; }
+}
 .merge-members { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .merge-member { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
 .merge-member-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

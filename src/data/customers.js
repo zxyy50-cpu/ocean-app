@@ -3,7 +3,7 @@ import { cleanText, comparisonKey, companyKey, digitsOnly, splitList } from "../
 import { canonicalArea, customerInAreas, normalizeAreas } from "./tags.js";
 import { qualificationTotal } from "./qualification.js";
 
-export const RELATION_STATUSES = Object.freeze(["未接觸", "開發中", "洽談中", "往來中", "重點培養", "暫停追蹤"]);
+export const RELATION_STATUSES = Object.freeze(["未接觸", "開發中", "洽談中", "往來中", "重點培養", "暫停追蹤", "不開發"]);
 export const ARCHIVE_REASONS = Object.freeze(["重複資料", "公司歇業／搬遷", "非目標客戶", "已轉給其他業務", "其他"]);
 
 const PHONE = /^[+()\d\s#-]{6,30}$/;
@@ -226,7 +226,7 @@ export function knownAreaLabels(model) {
   return [...labels].sort((left, right) => left.localeCompare(right, "zh-Hant"));
 }
 
-// The six standard statuses; an older imported value stays selectable on that
+// The standard statuses; an older imported value stays selectable on that
 // customer only, so editing never silently rewrites it.
 export function statusOptions(current = "") {
   const value = cleanText(current);

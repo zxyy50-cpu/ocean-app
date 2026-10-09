@@ -32,14 +32,17 @@ export function enrichPatch(customer, prospect) {
   if (industry.length !== (customer.industryTags || []).length) patch.industryTags = industry;
   const segments = uniqueList([...(customer.segmentTags || []), ...(prospect.segmentTags || [])]);
   if (segments.length !== (customer.segmentTags || []).length) patch.segmentTags = segments;
-  const note = cleanText(prospect.notes);
-  if (note && !String(customer.notes || "").includes(note)) patch.notes = [customer.notes, `【名單】${prospect.notes}`].filter(Boolean).join("\n");
+  // Line by line, so a list rebuilt with extra facts (e.g. 資本額) only adds the new lines.
+  const existing = String(customer.notes || "");
+  const lines = String(prospect.notes || "").split("\n").map(cleanText).filter((line) => line && !existing.includes(line));
+  if (lines.length) patch.notes = [existing, ...lines.map((line) => `【名單】${line}`)].filter(Boolean).join("\n");
   return patch;
 }
 
 export function planProspectImport(prospects = [], model) {
   const customers = model.customers;
   const knownRefs = new Set(Object.values(model.all).flat().map((record) => record.sourceRef).filter(Boolean));
+  const bySourceRef = new Map(customers.filter((customer) => customer.sourceRef).map((customer) => [customer.sourceRef, customer]));
   const byNo = new Map(customers.filter((customer) => customer.customerNo).map((customer) => [customer.customerNo, customer]));
   const byTax = new Map(customers.filter((customer) => customer.taxId).map((customer) => [customer.taxId, customer]));
   const byKey = new Map();
@@ -50,7 +53,15 @@ export function planProspectImport(prospects = [], model) {
   const keys = [...byKey.keys()].filter((key) => key.length >= 4);
   const plan = { add: [], enrich: [], similar: [], unchanged: 0, skipped: 0, areas: {} };
   for (const prospect of prospects) {
-    if ((prospect.refs || [prospect.ref]).some((ref) => knownRefs.has(ref))) { plan.skipped += 1; continue; }
+    const refs = prospect.refs || [prospect.ref];
+    if (refs.some((ref) => knownRefs.has(ref))) {
+      // Imported before: only top up what a rebuilt list adds (e.g. the capital tag); never re-create.
+      const imported = refs.map((ref) => bySourceRef.get(ref)).find(Boolean);
+      const patch = imported ? enrichPatch(imported, prospect) : {};
+      if (Object.keys(patch).length) plan.enrich.push({ prospect, customer: imported, patch });
+      else plan.skipped += 1;
+      continue;
+    }
     const key = companyKey(prospect.name);
     const exact = (prospect.customerNo && byNo.get(prospect.customerNo)) || (prospect.taxId && byTax.get(prospect.taxId)) || best(model, byKey.get(key));
     if (exact) {
