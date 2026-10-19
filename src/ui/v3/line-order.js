@@ -110,6 +110,13 @@ export function renderLineOrder(ctx, route) {
         onClick: () => setDraft(changeCustomer(state.draft, { ...customer, ...candidate, contact: customer.contact || candidate.contact, salutation: "" }, { reference, today, salutations: savedSalutations(ctx.model.all) })),
       }))) : null,
       h("div", { className: "search-box" }, [search]), results,
+      (customer.contactChoices || []).length > 1 && !customer.contact ? h("div", { className: "stack" }, [
+        h("small", { className: "muted", text: "這位客戶有幾位聯絡人，這次是誰下單？" }),
+        h("div", { className: "chip-group", dataset: { lineContactChoices: "" } }, customer.contactChoices.map((name) => h("button", {
+          type: "button", className: "small ghost", text: name,
+          onClick: () => setDraft({ ...state.draft, customer: { ...customer, contact: name, salutation: salutationFor(name, savedSalutations(ctx.model.all)) } }),
+        }))),
+      ]) : null,
       h("div", { className: "form-grid" }, [
         h("label", { className: "field" }, [h("span", { className: "field-label", text: "聯絡人" }), contact]),
         h("label", { className: "field" }, [h("span", { className: "field-label", text: "客戶版稱呼（存一次會記住）" }), salutation]),

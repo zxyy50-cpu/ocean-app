@@ -41,9 +41,11 @@ export function lastOrder(reference, customerNo) {
 
 // Picked rows → the same draft the message parser produces, so review, texts and sheet writing are shared.
 export function draftFromPicks({ customer, picks, reference, today, salutations = {} }) {
-  const contact = customer.contact || [...(reference.customers.get(customer.customerNo)?.contacts || [])][0] || "";
+  // One contact on file is used; with several, the user picks who is ordering (no guessing who to greet).
+  const known = [...(reference.customers.get(customer.customerNo)?.contacts || [])];
+  const contact = customer.contact || (known.length === 1 ? known[0] : "");
   const fullCustomer = {
-    customerNo: customer.customerNo || "", customerId: customer.customerId || "", company: customer.company || "", contact,
+    customerNo: customer.customerNo || "", customerId: customer.customerId || "", company: customer.company || "", contact, contactChoices: known,
     status: "確定", why: "從常購清單選取", candidates: [], mentions: [], phone: "",
     salutation: customer.salutation || salutationFor(contact, salutations),
   };
