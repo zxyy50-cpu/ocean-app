@@ -77,6 +77,18 @@ export function orderAliases(all) {
   return readSetting(all, "orderAliases") || {};
 }
 
+// 未稅/含稅 the user chose per customer number, so schools quoted 含稅 come up 含稅 next time.
+export function orderTaxByCustomer(all) {
+  return readSetting(all, "orderTaxByCustomer") || {};
+}
+
+export async function rememberTax(db, all, customerNo, value, requestId) {
+  if (!customerNo || !["未稅", "含稅"].includes(value)) return { ok: true };
+  const current = orderTaxByCustomer(all);
+  if (current[customerNo] === value) return { ok: true };
+  return saveSetting(db, "orderTaxByCustomer", { ...current, [customerNo]: value }, requestId);
+}
+
 export function savedSalutations(all) {
   return readSetting(all, "orderSalutations") || {};
 }

@@ -7,7 +7,7 @@ import { emptyReference } from "../../data/order-reference.js";
 import { customerPurchases, draftFromPicks, lastOrder } from "../../data/reorder.js";
 import {
   appIdsOf, draftRows, LINE_SHEETS, learnAlias, loadReference, orderAliases, recognizeImage, refreshReference, saveLineOrder, saveSalutation,
-  savedOrderRows, savedSalutations, setLineOrderStatus, sheetState, writeOrderToSheet,
+  orderTaxByCustomer, rememberTax, savedOrderRows, savedSalutations, setLineOrderStatus, sheetState, writeOrderToSheet,
 } from "../../data/line-orders.js";
 import { badge, confirmDialog, emptyState, h, money, toast } from "../dom.js";
 import { registerPage } from "../app.js";
@@ -63,7 +63,7 @@ export function renderLineOrder(ctx, route) {
     if (!text.value.trim()) { status.textContent = "先貼上訂購訊息"; return; }
     const all = ctx.model.all;
     state.saved = null;
-    setDraft(parseOrderMessage(text.value, { model: ctx.model, reference, aliases: orderAliases(all), salutations: savedSalutations(all), today }));
+    setDraft(parseOrderMessage(text.value, { model: ctx.model, reference, aliases: orderAliases(all), salutations: savedSalutations(all), taxByCustomer: orderTaxByCustomer(all), today }));
     status.textContent = reference.productList.length ? "" : "還沒有商品清單與購買紀錄，料號與價格都會是待確認。請先按「更新商品與購買紀錄」。";
   };
   text.addEventListener("input", () => { state.text = text.value; persist(ctx); });
@@ -89,7 +89,7 @@ export function renderLineOrder(ctx, route) {
       results.replaceChildren(...customerChoices(search.value, { model: ctx.model, reference }).map((choice) => h("button", {
         type: "button", className: "small ghost", dataset: { lineCustomerPick: choice.customerNo || choice.customerId },
         text: [choice.company, choice.contact, choice.customerNo ? `#${choice.customerNo}` : "（無客戶編號）"].filter(Boolean).join(" "),
-        onClick: () => setDraft(changeCustomer(state.draft, { ...customer, ...choice, contact: customer.contact || choice.contact, salutation: "" }, { reference, today, salutations: savedSalutations(ctx.model.all) })),
+        onClick: () => setDraft(changeCustomer(state.draft, { ...customer, ...choice, contact: customer.contact || choice.contact, salutation: "" }, { reference, today, salutations: savedSalutations(ctx.model.all), taxByCustomer: orderTaxByCustomer(ctx.model.all) })),
       })));
     });
     const contact = h("input", { value: customer.contact, placeholder: "聯絡人", "aria-label": "聯絡人", dataset: { lineContact: "" }, onChange: (event) => {
@@ -107,7 +107,7 @@ export function renderLineOrder(ctx, route) {
       h("small", { className: "muted", text: customer.why }),
       customer.status !== "確定" && customer.candidates?.length ? h("div", { className: "chip-group" }, customer.candidates.map((candidate) => h("button", {
         type: "button", className: "small ghost", text: `${candidate.company || ""} ${candidate.contact || ""} #${candidate.customerNo || "—"}`.trim(),
-        onClick: () => setDraft(changeCustomer(state.draft, { ...customer, ...candidate, contact: customer.contact || candidate.contact, salutation: "" }, { reference, today, salutations: savedSalutations(ctx.model.all) })),
+        onClick: () => setDraft(changeCustomer(state.draft, { ...customer, ...candidate, contact: customer.contact || candidate.contact, salutation: "" }, { reference, today, salutations: savedSalutations(ctx.model.all), taxByCustomer: orderTaxByCustomer(ctx.model.all) })),
       }))) : null,
       h("div", { className: "search-box" }, [search]), results,
       (customer.contactChoices || []).length > 1 && !customer.contact ? h("div", { className: "stack" }, [
@@ -168,15 +168,31 @@ export function renderLineOrder(ctx, route) {
   function orderCard(draft) {
     const select = (value, options, label, data, onChange) => h("label", { className: "field" }, [h("span", { className: "field-label", text: label }), h("select", { dataset: data, onChange }, options.map((option) => h("option", { value: option, text: option, selected: option === value })))]);
     const totals = orderTotals(draft.items);
+    const inclusive = draft.taxType.value === "含稅";
+    // One tap switches every price the customer sees; the choice is remembered for this customer.
+    const setTax = (value) => {
+      if (draft.taxType.value === value) return;
+      setDraft({ ...state.draft, taxType: { value, source: "手動" } });
+      rememberTax(ctx.db, ctx.model.all, draft.customer.customerNo, value, requestId("order-tax")).catch(() => {});
+    };
+    const taxToggle = h("div", { className: "field" }, [
+      h("span", { className: "field-label", text: `報價稅別${draft.taxType.source && draft.taxType.source !== "手動" ? `（${draft.taxType.source}）` : ""}` }),
+      h("div", { className: "tax-toggle", role: "radiogroup", "aria-label": "報價稅別", dataset: { lineTaxToggle: "" } }, ["未稅", "含稅"].map((value) => h("button", {
+        type: "button", role: "radio", "aria-checked": String(draft.taxType.value === value), className: draft.taxType.value === value ? "is-on" : "", dataset: { lineTax: value }, text: value, onClick: () => setTax(value),
+      }))),
+    ]);
     return h("section", { className: "card", dataset: { lineOrderFields: "" } }, [
       h("div", { className: "form-grid" }, [
+        taxToggle,
         select(draft.delivery.value, ["寄送", "自取", "待確認"], `配送方式${draft.delivery.source === "預設" ? "（預設）" : ""}`, { lineDelivery: "" }, (event) => setDraft({ ...state.draft, delivery: { value: event.target.value, source: "手動" } })),
-        select(draft.taxType.value, ["未稅", "含稅", "待確認"], `稅額${draft.taxType.source === "預設" ? "（預設）" : ""}`, { lineTax: "" }, (event) => setDraft({ ...state.draft, taxType: { value: event.target.value, source: "手動" } })),
         h("label", { className: "field" }, [h("span", { className: "field-label", text: "出貨時間" }), h("input", { value: draft.shipTime, dataset: { lineShip: "" }, placeholder: "例如：今天寄出、9/4 前到貨", onChange: (event) => setDraft({ ...state.draft, shipTime: event.target.value.trim() }) })]),
       ]),
       h("label", { className: "field" }, [h("span", { className: "field-label", text: "備註（一行一項，例如效期、發票、扣款、先寄部分）" }), h("textarea", { rows: 3, value: draft.notes.join("\n"), dataset: { lineNotes: "" }, onChange: (event) => setDraft({ ...state.draft, notes: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean) }) })]),
       h("div", { className: "line-totals", dataset: { lineTotals: "" } }, [
-        h("span", { text: `未稅合計 ${money(Math.round(totals.net))}` }), h("span", { text: `稅額 5% ${money(totals.tax)}` }), h("strong", { text: `含稅總金額 ${money(totals.gross)}` }),
+        inclusive ? h("span", { text: `未稅合計 ${money(Math.round(totals.net))}` }) : h("strong", { text: `未稅合計 ${money(Math.round(totals.net))}` }),
+        h("span", { text: `稅額 5% ${money(totals.tax)}` }),
+        inclusive ? h("strong", { text: `含稅總金額 ${money(totals.gross)}` }) : h("span", { text: `含稅總金額 ${money(totals.gross)}` }),
+        h("small", { className: "muted", text: inclusive ? "給客戶的文字用含稅價" : "給客戶的文字用未稅價" }),
         totals.complete ? null : badge(`${totals.missing} 項價格待確認`, "warn"),
       ]),
     ]);
@@ -360,7 +376,7 @@ export function renderLineOrder(ctx, route) {
           return { code, name: row?.name, quantity: pick.quantity === "" || pick.quantity === undefined ? null : Number(pick.quantity), price };
         });
         state.saved = null;
-        setDraft(draftFromPicks({ customer, picks, reference, today, salutations: savedSalutations(ctx.model.all) }));
+        setDraft(draftFromPicks({ customer, picks, reference, today, salutations: savedSalutations(ctx.model.all), taxByCustomer: orderTaxByCustomer(ctx.model.all) }));
         draftBox.scrollIntoView?.({ behavior: "smooth", block: "start" });
       } });
     const productSearch = h("input", { type: "search", placeholder: "加入其他商品：料號或品名", "aria-label": "加入其他商品", dataset: { reorderProductSearch: "" } });

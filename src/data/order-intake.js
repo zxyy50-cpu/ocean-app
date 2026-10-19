@@ -463,7 +463,17 @@ function shipTime(plain, today) {
   return null;
 }
 
-export function parseOrderMessage(text, { model = null, reference, aliases = {}, salutations = {}, today, customerOverride = null } = {}) {
+// 未稅 unless this customer is known to be quoted 含稅: what the user chose for them before,
+// or else the 稅額 of their latest row in LINE訂單整理.
+export function defaultTaxType(reference, customerNo, taxByCustomer = {}) {
+  if (customerNo && taxByCustomer[customerNo]) return { value: taxByCustomer[customerNo], source: "這位客戶的習慣" };
+  const lastLine = customerNo ? reference.lineOrders.filter((entry) => entry.customerNo === customerNo && /^(含稅|未稅)$/u.test(entry.taxType))
+    .sort((left, right) => String(right.date).localeCompare(String(left.date)))[0] : null;
+  if (lastLine) return { value: lastLine.taxType, source: `上次 LINE 訂單（${lastLine.date.replaceAll("-", "/")}）是${lastLine.taxType}` };
+  return { value: "未稅", source: "預設" };
+}
+
+export function parseOrderMessage(text, { model = null, reference, aliases = {}, salutations = {}, taxByCustomer = {}, today, customerOverride = null } = {}) {
   const plain = normalize(text).trim();
   const customer = customerOverride || identifyCustomer(plain, { model, reference, salutations });
   // Who is ordering is not what they order: drop the customer's names and the 「…要訂購：」 lead-in.
@@ -580,7 +590,7 @@ export function parseOrderMessage(text, { model = null, reference, aliases = {},
   const delivery = /自取|面交|親送|來拿|過去拿/u.test(plain) ? { value: "自取", source: "訊息" } : /寄|送至|送到|出貨/u.test(plain) ? { value: "寄送", source: "訊息" } : { value: "寄送", source: "預設" };
   return {
     date: today, raw: plain, customer, items, delivery,
-    taxType: { value: anyTax === "含稅" && !/未稅/u.test(plain) ? "含稅" : "未稅", source: anyTax ? "訊息" : "預設" },
+    taxType: anyTax ? { value: anyTax === "含稅" && !/未稅/u.test(plain) ? "含稅" : "未稅", source: "訊息" } : defaultTaxType(reference, customer.customerNo, taxByCustomer),
     shipTime: ship?.text || "", urgent: Boolean(ship?.urgent), notes: orderNotes(plain), checks,
   };
 }
@@ -637,7 +647,9 @@ export function blankItem(context) {
 }
 
 // Picking another customer changes every 「最近成交價」, so the items are priced again.
-export function changeCustomer(draft, customer, { reference, today, salutations = {} }) {
+export function changeCustomer(draft, customer, { reference, today, salutations = {}, taxByCustomer = {} }) {
+  // The tax default follows the customer, unless the message or the user already decided.
+  if (!["訊息", "手動"].includes(draft.taxType?.source)) draft = { ...draft, taxType: defaultTaxType(reference, customer.customerNo, taxByCustomer) };
   const next = { ...customer, salutation: customer.salutation || salutationFor(customer.contact, salutations), status: "確定", why: "你選定的客戶" };
   // Guesses made without knowing the customer are ranked again with what this customer actually buys.
   const items = draft.items.map((item) => {
@@ -743,8 +755,10 @@ export function secretaryText(draft) {
   return lines.join("\n");
 }
 
-// The customer sees 含稅 prices: unit, each subtotal and the total, all of which add up.
+// The customer sees the prices in the order's tax mode (未稅 by default, 含稅 for those quoted so);
+// unit, each subtotal and the total always add up.
 export function customerText(draft) {
+  const inclusive = draft.taxType?.value === "含稅";
   const greeting = draft.customer.salutation ? `${draft.customer.salutation}您好` : "（稱呼待確認）您好";
   const unsure = draft.items.filter((item) => item.codeStatus !== "確定" || !item.quantity);
   const flagged = draft.items.filter((item) => item.checks.some((check) => ["stock", "expiry", "discontinued"].includes(check.field)));
@@ -753,14 +767,15 @@ export function customerText(draft) {
     lines.push(`${index + 1}. ${[item.code, item.name || item.said, item.spec].filter(Boolean).join("｜")}${item.codeStatus === "確定" ? "" : `（您說的「${item.said}」是這項嗎？）`}`);
     lines.push(`數量：${item.quantity ?? "請問需要幾個？"}${item.quantity ? ` ${item.unit}` : ""}`);
     if (item.unitPrice !== null) {
-      lines.push(`含稅單價：${money(Math.round(withTax(item.unitPrice) * 100) / 100)} 元／${item.unit || "單位"}`);
-      if (item.quantity) lines.push(`小計：${itemGross(item).toLocaleString("en-US")} 元`);
+      lines.push(inclusive ? `含稅單價：${money(Math.round(withTax(item.unitPrice) * 100) / 100)} 元／${item.unit || "單位"}` : `單價：${money(item.unitPrice)} 元／${item.unit || "單位"}`);
+      if (item.quantity) lines.push(`小計：${inclusive ? itemGross(item).toLocaleString("en-US") : roundedMoney(item.unitPrice * item.quantity)} 元`);
     } else lines.push("單價：確認後回覆您");
     lines.push("");
   });
   const totals = orderTotals(draft.items);
-  if (totals.complete) lines.push(`含稅總金額：${totals.gross.toLocaleString("en-US")} 元`);
-  else lines.push(`含稅總金額：待價格確認後回覆您`);
+  const totalLabel = inclusive ? "含稅總金額" : "總金額";
+  if (totals.complete) lines.push(`${totalLabel}：${inclusive ? totals.gross.toLocaleString("en-US") : roundedMoney(totals.net)} 元${inclusive ? "" : "（未稅）"}`);
+  else lines.push(`${totalLabel}：待價格確認後回覆您`);
   if (flagged.length) lines.push(`${flagged.map((item) => item.name || item.said).join("、")} 的供貨狀況（庫存／效期／是否停產）我確認後再回覆您。`);
   if (draft.shipTime) lines.push(`出貨時間：${draft.shipTime}`);
   lines.push(unsure.length ? "再麻煩您確認，謝謝！" : "確認沒問題的話我就幫您安排出貨，謝謝！");

@@ -1,5 +1,5 @@
 import { addDays } from "../core/dates.js";
-import { draftChecks, finishItem, salutationFor } from "./order-intake.js";
+import { defaultTaxType, draftChecks, finishItem, salutationFor } from "./order-intake.js";
 
 // 常購快速下單: what a customer buys again and again, picked by hand instead of read from a message.
 // Built from the same reference data (歷年購買紀錄_整理版 + LINE訂單整理) as the LINE order intake.
@@ -40,7 +40,7 @@ export function lastOrder(reference, customerNo) {
 }
 
 // Picked rows → the same draft the message parser produces, so review, texts and sheet writing are shared.
-export function draftFromPicks({ customer, picks, reference, today, salutations = {} }) {
+export function draftFromPicks({ customer, picks, reference, today, salutations = {}, taxByCustomer = {} }) {
   // One contact on file is used; with several, the user picks who is ordering (no guessing who to greet).
   const known = [...(reference.customers.get(customer.customerNo)?.contacts || [])];
   const contact = customer.contact || (known.length === 1 ? known[0] : "");
@@ -56,7 +56,7 @@ export function draftFromPicks({ customer, picks, reference, today, salutations 
   }, { reference, customerNo: fullCustomer.customerNo, today }));
   return {
     date: today, raw: "（常購快速下單）", customer: fullCustomer, items,
-    delivery: { value: "寄送", source: "預設" }, taxType: { value: "未稅", source: "預設" },
+    delivery: { value: "寄送", source: "預設" }, taxType: defaultTaxType(reference, fullCustomer.customerNo, taxByCustomer),
     shipTime: "", urgent: false, notes: [], checks: draftChecks(fullCustomer, items, []),
   };
 }
