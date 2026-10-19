@@ -15,8 +15,13 @@ const NUM = "\\d+(?:\\.\\d+)?|[一二兩三四五六七八九十百]+";
 // Chinese units can touch the product name (「1罐PDA」); latin units must end at a word boundary.
 const UNITS = "小包|大盒|盒|罐|瓶|包|箱|支|片|組|個|管|條|袋|桶|批|套|捲|劑|(?:BOX|BOT|PKG|PK|PCS|PC|EA|CTN|CS|BX|PAC|KIT|SET|VL|Each)(?![A-Za-z])";
 const HEAD = /(?:要再訂|要訂購|要訂|要購買|要買|確認訂購|追加訂購|改訂單|改訂|加訂|訂購|訂單|需求|請購|要詢價|詢價|要詢問|想詢問|詢問|想請您報價)\s*[:：]?|[:：]/u;
-const SPEC = /\d+(?:\.\d+)?\s*(?:g|mg|kg|ml|mL|L|mm|cm|μg|µg|ug|μl|µl|ul|tests?|T|plates?|well)(?![A-Za-z])/giu;
-const NOTE_WORDS = /發票|統編|效期|寄|送至|送到|地址|收件|扣款|扣寄|COA|估價|報價單|低溫|冷藏|急用|到貨|出貨日|今天|明天|後天|下週|下星期|月底|前到|謝謝|感謝|麻煩您|您好|你好|請問|請購單|用途|請購日期|請購單位/u;
+// Pack sizes such as 「250片/盒」「10 PKG/BOX」 describe the product, they are never the quantity ordered.
+const SPEC = /\d+(?:\.\d+)?\s*(?:g|mg|kg|ml|mL|L|mm|cm|μg|µg|ug|μl|µl|ul|tests?|T|plates?|well)(?![A-Za-z])|\d+\s*(?:片|入|支|瓶|包|個|PCS?|EA|PKG|test)\s*\/\s*(?:盒|箱|包|袋|BOX|CTN|PKG|BOT|小盒)/giu;
+const NOTE_WORDS = /發票|統編|效期|寄|送至|送到|地址|收件|扣款|扣寄|COA|估價|報價單|低溫|冷藏|急用|到貨|出貨日|今天|明天|後天|下週|下星期|月底|前到|謝謝|感謝|麻煩您|您好|你好|請問|請購單|用途|請購日期|請購單位|教學|示範|拜訪|過來|來一趟|順便來|安裝|維修|保養/u;
+// 「請問…還是跟您叫貨嗎？」 asks about the product; without a quantity it is context, not an item.
+const QUESTION = /請問|嗎|呢|[？?]/u;
+// The customer asking the sales rep to come by (teaching, installing, a demo) is a visit, not a product.
+const VISIT_REQUEST = /(?:來|過來|到場|上門|順便)[^，。；,;]{0,12}?(?:教學|示範|安裝|講解|教育訓練|說明|維修|保養)|(?:教學|示範|安裝)一下/u;
 const PRODUCTISH = /[A-Za-z]|培養|試劑|試紙|血|液|菌|片|膜|杯|袋|管|包|盤|套組|抗|素|鹽|糖|酶|脢|漿|劑|油|甘油/u;
 const NEGATION = /先不用|不用了|不用|不要|不訂|取消/u;
 const FILLERS = ["訂購以下", "如下", "以下", "我這邊", "這邊", "想再和您訂購", "想和您訂", "想跟您訂", "我還需要訂", "我還需要", "還需要", "我需要", "需要訂購", "需要", "要訂購", "訂購", "要訂", "要買", "購買", "再訂", "追加訂購", "追加", "加訂", "加購", "想要", "想訂", "麻煩再訂", "麻煩訂", "麻煩", "幫我出", "幫我", "請幫我", "可以", "我要", "我想", "然後要", "還要", "也要", "要", "訂", "買", "再", "請", "一下", "這次", "另外", "還有", "然後", "也", "改訂", "確認", "共", "您好", "你好", "謝謝", "感謝", "的", "了", "喔", "嗎", "呢", "～", "~"];
@@ -75,6 +80,9 @@ function appCustomerFor(model, customerNo, names = []) {
 export function salutationFor(contact, saved = {}) {
   if (saved[comparisonKey(contact)]) return saved[comparisonKey(contact)];
   // 「Joyce（莊翔傑lab）」: the lab in brackets is not part of how we greet her.
+  // 「丁橋瀚(主任)」 → 丁主任: a title in brackets is how we greet.
+  const bracketTitle = String(contact || "").match(/^([一-鿿])[一-鿿]{1,3}\s*[（(](主任|經理|課長|副課長|組長|老師|教授|技師|博士|處長|廠長|協理)[)）]/u);
+  if (bracketTitle) return `${bracketTitle[1]}${bracketTitle[2]}`;
   const name = cleanText(String(contact || "").replace(/[（(][^）)]*[）)]/gu, ""));
   if (!name) return "";
   const titled = name.match(/^([一-鿿])[一-鿿]{0,2}?(老師|教授|組長|課長|副課長|經理|主任|博士|技師)$/u);
@@ -133,8 +141,11 @@ export function identifyCustomer(text, { model, reference, salutations = {} } = 
   }
   // A contact named in the message but not on file, e.g. 「張于婷 0958006223」 or 「立高 趙郁婷：」.
   if (!result.contact) {
-    const named = plain.match(/([一-鿿]{2,4})\s*(?:\(|（)?\s*09\d{2}-?\d{3}-?\d{3}/u) || plain.match(/^[^：:\n]{0,12}?\s([一-鿿]{2,4})\s*[：:]/u);
-    if (named) result.contact = named[1];
+    // 「張于婷 0958006223」, 「立高 趙郁婷：」 or 「台灣農畜 丁橋瀚(主任)：」 (the title stays with the name).
+    const named = plain.match(/([一-鿿]{2,4})\s*(?:\(|（)?\s*09\d{2}-?\d{3}-?\d{3}/u)
+      || plain.match(/(?:^|\s)([一-鿿]{2,4}\s*[（(](?:主任|經理|課長|副課長|組長|老師|教授|技師|博士|處長|廠長|協理)[)）])\s*[：:]?/u)
+      || plain.match(/^[^：:\n]{0,24}?\s([一-鿿]{2,4})\s*[：:]/u);
+    if (named) result.contact = named[1].replace(/\s+/g, "");
   }
   const app = appCustomerFor(model, result.customerNo, [result.company]);
   if (app) { result.customerId = app.id; result.company ||= app.name; }
@@ -375,6 +386,7 @@ export function priceFor({ reference, customerNo, code, specified, today }) {
   if (specified) {
     unitPrice = specified.tax === "含稅" ? withoutTax(specified.value) : specified.value;
     source = specified.tax === "含稅" ? `客戶指定（含稅 ${specified.value}）` : "客戶指定";
+    if (story && story.latest.unitPrice === unitPrice) source += `，與 ${story.latest.date.replaceAll("-", "/")} 成交價相同`;
     if (story && story.latest.unitPrice !== unitPrice) alerts.push(`客戶指定價 ${unitPrice} 與上次成交價 ${story.latest.unitPrice}（${formatShortDate(story.latest.date)}）不同，以客戶最新訊息為準`);
   } else if (story) {
     unitPrice = story.latest.unitPrice;
@@ -430,7 +442,14 @@ function orderNotes(plain) {
   if (/估價單/u.test(plain)) add("客戶需要估價單");
   const receiver = plain.match(/(?:收件人|寄送到|寄到|送至|送到|地址)\s*[:：]?\s*([^；;。\n]{4,60})/u);
   if (receiver) add(`收件：${receiver[1].trim()}`);
-  if (/詢價|報價(?!單)|詢問/u.test(plain) && !/確認訂購|要訂|訂購/u.test(plain)) add("客戶詢價，尚未確定訂購");
+  if (/詢價|報價(?!單)|詢問/u.test(plain) && !/確認訂購|要訂|訂購|需要\s*\d|叫貨|要買/u.test(plain)) add("客戶詢價，尚未確定訂購");
+  const visit = plain.match(VISIT_REQUEST);
+  if (visit) {
+    // 「要請您順便來進行自動取膜機的教學一下」 → 自動取膜機教學
+    const what = plain.slice(visit.index, visit.index + visit[0].length + 8).replace(/[，。；,;\n(（].*$/u, "")
+      .replace(/要請您|請您|順便|過來|來進行|進行|來|一下|的|拜託/gu, "").trim();
+    add(`客戶請業務到場：${what || "到場服務"}（時間待約）`);
+  }
   return notes;
 }
 
@@ -473,6 +492,9 @@ export function parseOrderMessage(text, { model = null, reference, aliases = {},
     const codeToken = placeholders.find((token) => token.kind === "code");
     const nameToken = placeholders.find((token) => token.kind === "name");
     const codes = codeToken ? [codeToken.code] : numericCodes.length ? numericCodes : nameToken ? nameToken.codes : [];
+    // A visit request, or a question without a quantity, is conversation around the order.
+    if (VISIT_REQUEST.test(fragment.text) && !codeToken) continue;
+    if (QUESTION.test(fragment.text) && !quantity && !price && !codeToken) continue;
     const noteOnly = NOTE_WORDS.test(fragment.text) && !quantity && !codes.length;
     const hasProduct = codes.length > 0 || (name.length >= 2 && PRODUCTISH.test(name) && !noteOnly && !NOTE_WORDS.test(name));
     if (NEGATION.test(fragment.text) && hasProduct) { excluded.push(name || codeToken?.text || ""); continue; }
@@ -521,6 +543,18 @@ export function parseOrderMessage(text, { model = null, reference, aliases = {},
       }
     }
     resolvedItems.push({ ...item, resolved });
+  }
+  // A quote line further down (「SAR114H6Z47SJREA … 每盒 1625 元」) settles an earlier 「需要10盒的濾膜」:
+  // a certain code with no quantity joins the earlier item it is a candidate for.
+  for (let index = resolvedItems.length - 1; index > 0; index -= 1) {
+    const late = resolvedItems[index];
+    if (late.resolved.status !== "確定" || late.quantity) continue;
+    const earlier = resolvedItems.slice(0, index).find((item) => item.quantity && item.resolved.status !== "確定"
+      && ((item.resolved.candidates || []).includes(late.resolved.code) || item.resolved.code === late.resolved.code || describes(item.name, reference.products.get(late.resolved.code))));
+    if (!earlier) continue;
+    earlier.resolved = { ...late.resolved, why: `${late.resolved.why}（與「${earlier.name}」是同一項）` };
+    earlier.price ||= late.price;
+    resolvedItems.splice(index, 1);
   }
   // A stock or expiry question in a sentence of its own (「效期多久？」) concerns every item.
   const itemSentences = new Set(resolvedItems.map((item) => item.sentence));
