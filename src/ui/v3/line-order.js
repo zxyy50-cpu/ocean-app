@@ -23,7 +23,19 @@ export function resetLineOrderState() {
   reference = emptyReference();
 }
 
-const persist = (ctx) => ctx.db.setMeta(DRAFT_META, { text: state.text, draft: state.draft, saved: state.saved, sheet: state.sheet }).catch(() => {});
+// Each browser tab keeps its own draft (sessionStorage survives a reload in the same tab),
+// so two open order tabs never overwrite each other.
+function draftKey() {
+  try {
+    let id = globalThis.sessionStorage?.getItem("ocean-line-order-tab");
+    if (!id) { id = Math.random().toString(36).slice(2, 10); globalThis.sessionStorage?.setItem("ocean-line-order-tab", id); }
+    return `${DRAFT_META}:${id}`;
+  } catch {
+    return DRAFT_META;
+  }
+}
+
+const persist = (ctx) => ctx.db.setMeta(draftKey(), { text: state.text, draft: state.draft, saved: state.saved, sheet: state.sheet }).catch(() => {});
 
 function copyButton(getText, label) {
   return h("button", { type: "button", className: "small ghost", text: `複製${label}`, onClick: async (event) => {
@@ -323,7 +335,8 @@ export function renderLineOrder(ctx, route) {
     showReference(loaded);
     if (!state.restored) {
       state.restored = true;
-      const stored = await ctx.db.getMeta(DRAFT_META, null);
+      // This tab's own draft; a draft saved before per-tab drafts existed is picked up once.
+      const stored = (await ctx.db.getMeta(draftKey(), null)) || (await ctx.db.getMeta(DRAFT_META, null));
       if (stored && !state.text && !state.draft) { Object.assign(state, { text: stored.text || "", draft: stored.draft || null, saved: stored.saved || null, sheet: stored.sheet || "test" }); text.value = state.text; }
     }
     drawDraft();

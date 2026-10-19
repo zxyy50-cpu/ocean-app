@@ -1,6 +1,8 @@
 // Google Identity Services sign-in. The ID token stays in memory only; it is
 // never written to storage or source code.
 const GIS_SRC = "https://accounts.google.com/gsi/client";
+// After an unanswered silent sign-in, wait this long before trying silently again.
+const RETRY_SILENT_MS = 10 * 60 * 1000;
 
 function decodePayload(token) {
   try {
@@ -27,6 +29,7 @@ export function createGoogleAuth({ clientId, onChange = () => {} }) {
   let token = null;
   let payload = {};
   let initialized = false;
+  let failedAt = 0;
   const waiters = [];
 
   async function init() {
@@ -37,6 +40,7 @@ export function createGoogleAuth({ clientId, onChange = () => {} }) {
       auto_select: true,
       cancel_on_tap_outside: false,
       callback: (response) => {
+        failedAt = 0;
         token = response.credential;
         payload = decodePayload(token);
         waiters.splice(0).forEach((resolve) => resolve(token));
@@ -55,14 +59,23 @@ export function createGoogleAuth({ clientId, onChange = () => {} }) {
       await init();
       globalThis.google.accounts.id.renderButton(element, { theme: "outline", size: "large", text: "signin_with", locale: "zh-TW" });
     },
+    // True after a silent sign-in did not work: the page should show a sign-in button.
+    needsClick: () => !valid() && failedAt > 0 && Date.now() - failedAt < RETRY_SILENT_MS,
     // Returns a fresh token, trying a silent sign-in first. Resolves null if the user must click.
+    // Google's account window can sit behind the page and freeze it, so it is asked for at most
+    // once at a time and not again for a while after it went unanswered.
     async getIdToken() {
       if (valid()) return token;
+      if (failedAt && Date.now() - failedAt < RETRY_SILENT_MS) return null;
       try { await init(); } catch { return null; }
       return new Promise((resolve) => {
+        const first = waiters.length === 0;
         waiters.push(resolve);
-        globalThis.google.accounts.id.prompt();
-        setTimeout(() => { const index = waiters.indexOf(resolve); if (index >= 0) { waiters.splice(index, 1); resolve(null); } }, 8000);
+        if (first) globalThis.google.accounts.id.prompt();
+        setTimeout(() => {
+          const index = waiters.indexOf(resolve);
+          if (index >= 0) { waiters.splice(index, 1); failedAt = Date.now(); onChange({ signedIn: false, needsClick: true }); resolve(null); }
+        }, 8000);
       });
     },
     signOut() {

@@ -80,10 +80,24 @@ export function renderShell() {
         h("div", { dataset: { syncSlot: "top" } }),
       ]),
     ]),
+    h("div", { className: "signin-slot", dataset: { signinSlot: "" } }),
     h("div", { className: "group-tab-slot", dataset: { groupTabSlot: "" } }),
     h("main", { id: "page", className: "page", tabindex: "-1" }),
     h("nav", { className: "bottom-nav", "aria-label": "主要功能（手機）", dataset: { bottomNav: "" } }),
   ]);
+}
+
+// When Google's silent sign-in did not work, one visible button instead of hidden pop-ups.
+function updateSignIn(root, ctx) {
+  const slot = root.querySelector("[data-signin-slot]");
+  if (!slot) return;
+  if (!ctx.auth?.needsClick?.()) { slot.replaceChildren(); return; }
+  if (slot.querySelector("[data-signin-banner]")) return;
+  const button = h("div", { dataset: { signinButton: "" } });
+  slot.replaceChildren(h("div", { className: "warning-banner", dataset: { signinBanner: "" } }, [
+    h("span", { text: "Google 登入已過期，同步和 LINE 訂單暫停。按右邊登入後會自動繼續。" }), button,
+  ]));
+  ctx.auth.renderButton?.(button).catch(() => {});
 }
 
 export function updateShell(root, ctx, page) {
@@ -100,6 +114,7 @@ export function updateShell(root, ctx, page) {
     bottom.replaceChildren(...MAIN_ITEMS.map((item) => navLink(item, current)), more);
   }
   root.querySelector("[data-group-tab-slot]")?.replaceChildren(...groupTabs(ctx.route.name));
+  updateSignIn(root, ctx);
   const title = root.querySelector("[data-top-title]");
   if (title) title.textContent = page?.title || "Ocean";
   root.querySelectorAll("[data-sync-slot]").forEach((slot) => slot.replaceChildren(syncBadge(ctx)));
