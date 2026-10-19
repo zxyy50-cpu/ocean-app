@@ -4,6 +4,7 @@ import {
   productCandidates, productLabel, salutationFor, secretaryText, updateItem,
 } from "../../data/order-intake.js";
 import { emptyReference } from "../../data/order-reference.js";
+import { customerPurchases, draftFromPicks, lastOrder } from "../../data/reorder.js";
 import {
   appIdsOf, draftRows, LINE_SHEETS, learnAlias, loadReference, orderAliases, recognizeImage, refreshReference, saveLineOrder, saveSalutation,
   savedOrderRows, savedSalutations, setLineOrderStatus, sheetState, writeOrderToSheet,
@@ -14,11 +15,11 @@ import { registerPage } from "../app.js";
 // LINE 訂單: paste a LINE message (or a screenshot) → a checked draft → secretary / customer texts
 // → saved in the app and written to LINE訂單整理. Nothing is written until the user presses save.
 const DRAFT_META = "lineOrderDraft";
-const state = { text: "", draft: null, saved: null, sheet: "test", restored: false };
+const state = { text: "", draft: null, saved: null, sheet: "test", restored: false, mode: "message", reorder: { customer: null, picks: {}, showAll: false, extra: [] } };
 let reference = emptyReference();
 
 export function resetLineOrderState() {
-  Object.assign(state, { text: "", draft: null, saved: null, sheet: "test", restored: false });
+  Object.assign(state, { text: "", draft: null, saved: null, sheet: "test", restored: false, mode: "message", reorder: { customer: null, picks: {}, showAll: false, extra: [] } });
   reference = emptyReference();
 }
 
@@ -37,8 +38,9 @@ function checkList(checks) {
   return h("ul", { className: "line-checks" }, checks.map((check) => h("li", { className: check.soft ? "soft" : "hard", dataset: { check: check.field }, text: `${check.soft ? "提醒" : "待確認"}：${check.text}` })));
 }
 
-export function renderLineOrder(ctx) {
+export function renderLineOrder(ctx, route) {
   const today = ctx.today();
+  if (route?.query?.get("mode") === "reorder") state.mode = "reorder";
   const refInfo = h("p", { className: "muted", dataset: { lineReference: "" }, text: "讀取商品與購買紀錄…" });
   const text = h("textarea", { rows: 6, value: state.text, dataset: { lineText: "" }, "aria-label": "LINE 訂購訊息", placeholder: "貼上客戶的 LINE 訊息，例如：\n興農 楊津銘：我要 1罐PDA、1罐LBA，然後要一罐macconkey，貨號211387；單獨一張發票。" });
   const status = h("p", { className: "muted", role: "status", dataset: { lineStatus: "" } });
@@ -289,6 +291,7 @@ export function renderLineOrder(ctx) {
       toast(result.message, { tone: "error", timeout: 10000 });
     }
     if (state.draft) drawDraft();
+    drawReorder();
   };
 
   (async () => {
@@ -301,13 +304,113 @@ export function renderLineOrder(ctx) {
       if (stored && !state.text && !state.draft) { Object.assign(state, { text: stored.text || "", draft: stored.draft || null, saved: stored.saved || null, sheet: stored.sheet || "test" }); text.value = state.text; }
     }
     drawDraft();
-    if (loaded.stale && ctx.transport) refresh();
+    drawReorder();
+    // Only refresh in the background when already signed in: a sign-in prompt from here
+    // would open Google's account window behind the user's back and freeze the tab.
+    if (loaded.stale && ctx.transport && ctx.auth?.signedIn?.()) refresh();
   })();
   drawSaved();
 
+  // ---- 常購快速下單 ----------------------------------------------------------------------
+  const reorderBox = h("section", { className: "card stack", dataset: { reorder: "" } });
+  const reorder = state.reorder;
+  if (route?.query?.get("customerNo") && reorder.customer?.customerNo !== route.query.get("customerNo")) {
+    Object.assign(reorder, { customer: { customerNo: route.query.get("customerNo"), company: route.query.get("name") || "", contact: "", customerId: route.query.get("customer") || "" }, picks: {}, showAll: false });
+  }
+
+  function pickCustomer(choice) {
+    Object.assign(reorder, { customer: choice, picks: {}, showAll: false });
+    drawReorder();
+  }
+
+  function drawReorder() {
+    if (state.mode !== "reorder") return;
+    const customer = reorder.customer;
+    const search = h("input", { type: "search", placeholder: "客戶：公司、聯絡人或客戶編號", "aria-label": "選擇客戶", dataset: { reorderCustomerSearch: "" } });
+    const results = h("div", { className: "picker-results" });
+    search.addEventListener("input", () => {
+      results.replaceChildren(...customerChoices(search.value, { model: ctx.model, reference }).filter((choice) => choice.customerNo).map((choice) => h("button", {
+        type: "button", className: "small ghost", dataset: { reorderPick: choice.customerNo }, text: `${[choice.company, choice.contact].filter(Boolean).join(" ")} #${choice.customerNo}`,
+        onClick: () => pickCustomer(choice),
+      })));
+    });
+    if (!customer?.customerNo) {
+      reorderBox.replaceChildren(h("strong", { text: "先選客戶" }), h("div", { className: "search-box" }, [search]), results,
+        h("small", { className: "muted", text: "會列出這位客戶在歷年購買紀錄與 LINE 訂單整理裡買過的品項。" }));
+      return;
+    }
+    if (!customer.company) customer.company = [...(reference.customers.get(customer.customerNo)?.names || [])][0] || "";
+    const rows = customerPurchases(reference, customer.customerNo, { today });
+    const shown = reorder.showAll ? rows : rows.filter((row) => row.recent);
+    const picked = Object.entries(reorder.picks).filter(([, pick]) => pick.checked);
+    const last = lastOrder(reference, customer.customerNo);
+    const generate = h("button", { type: "button", className: "primary", dataset: { reorderGenerate: "" }, disabled: !picked.length, text: picked.length ? `產生訂單（${picked.length} 項）` : "勾選要訂的品項",
+      onClick: () => {
+        const picks = picked.map(([code, pick]) => {
+          const row = rows.find((item) => item.code === code);
+          // Only a price the user changed overrides the latest deal.
+          const price = pick.price !== undefined && pick.price !== "" && Number(pick.price) !== row?.lastPrice ? pick.price : null;
+          return { code, name: row?.name, quantity: pick.quantity === "" || pick.quantity === undefined ? null : Number(pick.quantity), price };
+        });
+        state.saved = null;
+        setDraft(draftFromPicks({ customer, picks, reference, today, salutations: savedSalutations(ctx.model.all) }));
+        draftBox.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      } });
+    const productSearch = h("input", { type: "search", placeholder: "加入其他商品：料號或品名", "aria-label": "加入其他商品", dataset: { reorderProductSearch: "" } });
+    const productResults = h("div", { className: "picker-results" });
+    productSearch.addEventListener("input", () => {
+      productResults.replaceChildren(...productCandidates(productSearch.value, reference, customer.customerNo, 6).map((candidate) => h("button", {
+        type: "button", className: "small ghost", text: productLabel(reference, candidate.code),
+        onClick: () => { reorder.picks[candidate.code] = { checked: true, quantity: 1 }; reorder.extra = [...new Set([...(reorder.extra || []), candidate.code])]; drawReorder(); },
+      })));
+    });
+    const extraRows = (reorder.extra || []).filter((code) => !rows.some((row) => row.code === code)).map((code) => ({ code, name: reference.products.get(code)?.name || code, spec: reference.products.get(code)?.spec || "", count: 0, lastDate: "", lastQuantity: null, lastPrice: null, recent: true }));
+    const row = (item) => {
+      const pick = reorder.picks[item.code] || {};
+      const box = h("input", { type: "checkbox", checked: Boolean(pick.checked), "aria-label": `選 ${item.name}`, dataset: { reorderCheck: item.code }, onChange: (event) => {
+        reorder.picks[item.code] = { ...pick, checked: event.target.checked, quantity: pick.quantity ?? item.lastQuantity ?? 1 };
+        drawReorder();
+      } });
+      const qty = h("input", { type: "number", min: 0, step: "any", value: pick.quantity ?? item.lastQuantity ?? "", "aria-label": "數量", dataset: { reorderQty: item.code }, onChange: (event) => { reorder.picks[item.code] = { ...reorder.picks[item.code], checked: true, quantity: event.target.value }; drawReorder(); } });
+      const price = h("input", { type: "number", min: 0, step: "any", value: pick.price ?? item.lastPrice ?? "", placeholder: "單價（未稅）", "aria-label": "單價（未稅）", dataset: { reorderPrice: item.code }, onChange: (event) => { reorder.picks[item.code] = { ...reorder.picks[item.code], checked: true, price: event.target.value }; drawReorder(); } });
+      return h("li", { className: `reorder-row${pick.checked ? " is-picked" : ""}`, dataset: { reorderRow: item.code } }, [
+        box,
+        h("div", { className: "reorder-main" }, [
+          h("strong", { text: `${item.code}｜${item.name}${item.nameZh ? `（${item.nameZh}）` : ""}` }),
+          h("small", { className: "muted", text: [item.spec, item.count ? `買過 ${item.count} 次・最近 ${String(item.lastDate).replaceAll("-", "/")}${item.lastQuantity ? ` ×${item.lastQuantity}` : ""}${item.lastPrice !== null ? ` @${item.lastPrice}` : ""}` : "新加入的商品"].filter(Boolean).join("・") }),
+        ]),
+        h("div", { className: "reorder-inputs" }, [qty, price]),
+      ]);
+    };
+    reorderBox.replaceChildren(
+      h("div", { className: "section-head" }, [
+        h("div", {}, [h("strong", { text: `${customer.company || "客戶"} #${customer.customerNo}` }), h("div", { className: "muted", text: rows.length ? `買過 ${rows.length} 種品項` : "購買紀錄裡沒有這位客戶" })]),
+        h("button", { type: "button", className: "small ghost", text: "換客戶", onClick: () => { reorder.customer = null; drawReorder(); } }),
+      ]),
+      last.items.length ? h("button", { type: "button", className: "ghost", dataset: { reorderLast: "" }, text: `照上次訂單（${last.date.replaceAll("-", "/")}，${last.items.length} 項）`, onClick: () => {
+        reorder.picks = Object.fromEntries(last.items.map((item) => [item.code, { checked: true, quantity: item.quantity ?? 1 }]));
+        reorder.showAll = reorder.showAll || last.items.some((item) => !rows.find((row) => row.code === item.code)?.recent);
+        drawReorder();
+      } }) : null,
+      h("ul", { className: "reorder-list" }, [...extraRows, ...shown].map(row)),
+      rows.length > shown.length ? h("button", { type: "button", className: "small ghost", dataset: { reorderShowAll: "" }, text: `顯示一年前買過的（還有 ${rows.length - shown.length} 項）`, onClick: () => { reorder.showAll = true; drawReorder(); } }) : null,
+      h("div", { className: "search-box" }, [productSearch]), productResults,
+      h("div", { className: "button-row" }, [generate]),
+    );
+  }
+
+  const modeTabs = h("div", { className: "tabs", role: "tablist" }, [["message", "貼上訊息／截圖"], ["reorder", "常購快速下單"]].map(([value, label]) => h("button", {
+    type: "button", className: "button small ghost", role: "tab", "aria-selected": String(state.mode === value), dataset: { lineMode: value }, text: label,
+    onClick: () => { state.mode = value; ctx.render(); },
+  })));
+
   return h("div", { className: "stack line-order" }, [
-    h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "LINE 訂單" }), h("p", { text: "貼上訊息或截圖，系統查客戶、料號與最近成交價；不確定的一律標「待確認」。" })])]),
-    h("section", { className: "card stack" }, [
+    h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "LINE 訂單" }), h("p", { text: state.mode === "reorder" ? "常買的品項直接勾選；價格帶這位客戶的最近成交價，可以改。" : "貼上訊息或截圖，系統查客戶、料號與最近成交價；不確定的一律標「待確認」。" })])]),
+    modeTabs,
+    state.mode === "reorder" ? h("div", { className: "stack" }, [
+      h("div", { className: "section-head" }, [refInfo, h("button", { type: "button", className: "small ghost", dataset: { lineRefresh: "" }, text: "更新商品與購買紀錄", onClick: refresh })]),
+      reorderBox,
+    ]) : h("section", { className: "card stack" }, [
       h("div", { className: "section-head" }, [refInfo, h("button", { type: "button", className: "small ghost", dataset: { lineRefresh: "" }, text: "更新商品與購買紀錄", onClick: refresh })]),
       text,
       h("div", { className: "button-row" }, [

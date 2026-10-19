@@ -95,6 +95,7 @@ export function renderFolder(ctx, route) {
         h("summary", { className: "button ghost", "aria-label": "更多動作", text: "⋯" }),
         h("div", { className: "more-actions-menu" }, [
           h("a", { className: "button small ghost", href: `#/opportunity/new?customer=${encodeURIComponent(customer.id)}`, text: "新商機" }),
+          customer.customerNo ? h("a", { className: "button small ghost", dataset: { reorderEntry: "" }, href: `#/line-order?mode=reorder&customerNo=${encodeURIComponent(customer.customerNo)}&name=${encodeURIComponent(customer.name)}&customer=${encodeURIComponent(customer.id)}`, text: "再訂一次" }) : null,
           h("button", { type: "button", className: "small ghost", dataset: { editCustomer: "" }, text: "編輯資料", onClick: () => openCustomerEditor(ctx, { customer }) }),
           hold ? null : h("button", { type: "button", className: "small ghost", dataset: { holdCustomer: "" }, text: "不開發", onClick: () => openHoldDialog(ctx, [customer], { onDone: () => ctx.render() }) }),
           h("button", { type: "button", className: "small ghost", dataset: { archiveCustomer: "" }, text: "封存", onClick: () => openArchiveCustomer(ctx, customer, { onDone: () => ctx.navigate("search") }) }),
