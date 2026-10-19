@@ -34,6 +34,22 @@
 .result-rows li:last-child { border-bottom: 0; }
 .result-rows li.result-with-action { display: flex; align-items: center; gap: 8px; }
 .result-rows li.result-with-action > a { flex: 1; min-width: 0; }
+/* Five daily tabs plus 更多 on phones; pages of one group share a tab strip above the page. */
+.v3 .bottom-nav { grid-template-columns: repeat(6, 1fr); }
+.v3 .bottom-nav .nav-link { font-size: 0.7rem; padding: 4px 2px; }
+.group-tab-slot:empty { display: none; }
+.group-tab-slot { padding: 12px 16px 0; max-width: 1120px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.group-tabs a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+@media (min-width: 900px) { .group-tab-slot { padding: 24px 32px 0; } .v3 .group-tab-slot + .page { padding-top: 16px; } }
+.line-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.9rem; }
+.line-checks li { padding: 6px 10px; border-radius: var(--radius-sm); }
+.line-checks li.hard { background: var(--warn-soft); color: var(--ink); }
+.line-checks li.soft { background: var(--bg); color: var(--muted); }
+.line-item.has-checks { border-color: var(--warn); }
+.line-order .needs-check { border-color: var(--warn); background: var(--warn-soft); }
+.line-tax { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+.line-totals { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding-top: 8px; border-top: 1px solid var(--line); }
+.line-output { margin: 0; white-space: pre-wrap; word-break: break-word; font: inherit; font-size: 0.92rem; line-height: 1.6; background: var(--bg); border-radius: var(--radius-sm); padding: 10px 12px; }
 .plan-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .plan-filters select { width: auto; max-width: 100%; }
 .plan-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }

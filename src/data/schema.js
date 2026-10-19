@@ -84,6 +84,7 @@ export function syncableFields(type) {
 export const OPPORTUNITY_STAGES = Object.freeze(["接觸", "提案", "議價", "成交", "失敗", "封存"]);
 export const OPEN_OPPORTUNITY_STAGES = Object.freeze(["接觸", "提案", "議價"]);
 export const LOST_REASONS = Object.freeze(["價格", "選用競品", "預算取消", "需求消失", "時程延後", "規格不符", "聯絡不上", "其他"]);
-export const ORDER_STATUSES = Object.freeze(["待確認", "待交客服", "已交客服", "處理中", "已出貨", "已完成", "已取消"]);
+// 已給秘書 / 已更新購買紀錄 are the LINE訂單整理 steps; the older statuses stay for existing orders.
+export const ORDER_STATUSES = Object.freeze(["待確認", "已給秘書", "已更新購買紀錄", "待交客服", "已交客服", "處理中", "已出貨", "已完成", "已取消"]);
 export const SIGNAL_STATUSES = Object.freeze(["待處理", "已建商機", "不處理"]);
 export const ITEM_CLASSIFICATIONS = Object.freeze({ first: "首次購買", repeat: "回購", review: "資料待確認" });

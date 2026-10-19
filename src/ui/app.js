@@ -56,7 +56,9 @@ export function createApp({ db, root = document.getElementById("app"), today = (
     setSync(client) {
       ctx.sync?.stop?.();
       ctx.sync = client;
-      ctx.refreshChrome();
+      // The sync center was drawn before the connection existed; draw it again so it does not say "not set up".
+      if (ctx.route?.name === "sync") ctx.render();
+      else ctx.refreshChrome();
     },
     refreshChrome() {
       ctx.rebuild();

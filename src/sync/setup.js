@@ -36,6 +36,8 @@ export async function connectSync(ctx, config, { auth: authOverride, transport: 
   const transport = transportOverride || createAppsScriptTransport({ endpoint: config.endpoint, getIdToken: () => auth.getIdToken(), deviceId: device });
   const client = createSyncClient({ db: ctx.db, transport, onStatus: () => ctx.refreshChrome() });
   ctx.auth = auth;
+  // Order intake calls the same Apps Script for its own actions (reference data, LINE sheet, OCR).
+  ctx.transport = transport;
   ctx.setSync(client);
   client.start();
   return client;

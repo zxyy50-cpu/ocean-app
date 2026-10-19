@@ -1,6 +1,7 @@
 import { requestId } from "../../core/ids.js";
 import { editableValues } from "../../data/db.js";
 import { displayName } from "../../data/archive.js";
+import { testConnection } from "../../data/line-orders.js";
 import { connectSync, loadSyncConfig, parseSetupLink, saveSyncConfig } from "../../sync/setup.js";
 import { badge, emptyState, field, formToObject, h, input, openDialog, showErrors, toast } from "../dom.js";
 import { registerPage } from "../app.js";
@@ -69,15 +70,36 @@ export function renderSync(ctx) {
   const failed = records.filter((record) => record.syncStatus === "failed");
   const pending = records.filter((record) => record.syncStatus === "pending");
   const status = ctx.sync?.status?.() || { configured: false };
+  const report = h("div", { className: "stack", dataset: { connectionReport: "" } });
   const summary = h("section", { className: "card" }, [
     h("div", { className: "kpi-strip" }, [["已同步", records.length - conflicts.length - failed.length - pending.length], ["等待同步", pending.length], ["同步失敗", failed.length], ["資料衝突", conflicts.length]].map(([label, count]) => h("div", { className: "kpi-mini", dataset: { syncCount: label } }, [h("small", { text: label }), h("strong", { text: String(count) })]))),
-    h("p", { className: "muted", style: { marginTop: "12px" }, text: !status.configured ? "尚未設定同步連線：所有資料都安全地保存在這台裝置，設定完成後會自動上傳。" : status.online === false ? "目前離線，恢復網路後會自動同步。" : status.lastSyncAt ? `上次同步：${new Date(status.lastSyncAt).toLocaleString("zh-TW")}` : "尚未完成第一次同步。" }),
+    h("p", { className: "muted", style: { marginTop: "12px" }, text: !status.configured ? "這個瀏覽器還沒設定同步連線（每個瀏覽器、每個網址要各設定一次；手機與電腦的設定不會互通）。資料目前只存在這台裝置，設定完成後會自動上傳。" : status.online === false ? "目前離線，恢復網路後會自動同步。" : status.lastSyncAt ? `上次同步：${new Date(status.lastSyncAt).toLocaleString("zh-TW")}` : "尚未完成第一次同步。" }),
     status.lastError ? h("p", { className: "field-error", dataset: { syncError: "" }, text: `上次錯誤：${status.lastError}` }) : null,
     status.needsSignIn ? h("div", { className: "warning-banner", text: "需要重新登入 Google 才能同步，請到「設定 → 同步連線」登入。" }) : null,
     h("div", { className: "button-row", style: { marginTop: "12px" } }, [
       status.configured ? h("button", { type: "button", className: "primary", dataset: { syncNow: "" }, disabled: status.running, text: status.running ? "同步中…" : "立即同步", onClick: async () => { const result = await ctx.sync.sync(); toast(result.ok ? `同步完成：上傳 ${result.accepted ?? 0} 筆、下載 ${result.pulled?.applied ?? 0} 筆` : result.error, { tone: result.ok ? "ok" : "error" }); } }) : null,
+      h("button", { type: "button", className: "ghost", dataset: { testConnection: "" }, text: "測試連線", onClick: async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        report.replaceChildren(h("p", { className: "muted", text: "測試中…（登入、Apps Script、各個試算表分頁）" }));
+        const steps = await testConnection(ctx);
+        button.disabled = false;
+        const failedStep = steps.find((step) => !step.ok);
+        // Not signed in: offer Google's sign-in button right here, then the test can simply run again.
+        const signIn = h("div", { dataset: { testSignIn: "" } });
+        if (failedStep?.name === "Google 登入與存取權限" && ctx.auth?.renderButton) ctx.auth.renderButton(signIn).catch(() => {});
+        report.replaceChildren(
+          h("p", { className: failedStep ? "field-error" : "ok-text", dataset: { testResult: failedStep ? "failed" : "ok" }, text: failedStep ? `連線有問題：${failedStep.name}` : "全部正常，可以同步，也可以讀取 LINE 訂單需要的資料" }),
+          failedStep?.name === "Google 登入與存取權限" ? h("div", { className: "stack" }, [h("small", { className: "muted", text: "按下面的按鈕登入後，再按一次「測試連線」。" }), signIn]) : null,
+          h("ul", { className: "task-list" }, steps.map((step) => h("li", { className: "task-row", dataset: { testStep: step.name } }, [
+            h("div", { className: "task-main" }, [h("strong", { text: step.name }), h("small", { className: step.ok ? "muted" : "field-error", text: step.detail })]),
+            badge(step.ok ? "正常" : "失敗", step.ok ? "ok" : "danger"),
+          ]))),
+        );
+      } }),
       h("a", { className: "button ghost", href: "#/settings", text: "同步連線設定" }),
     ]),
+    report,
   ]);
   const conflictList = h("section", { className: "card" }, [
     h("div", { className: "section-head" }, [h("h2", { text: "資料衝突" }), badge(String(conflicts.length), conflicts.length ? "warn" : "neutral")]),

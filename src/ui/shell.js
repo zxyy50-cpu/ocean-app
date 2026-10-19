@@ -59,8 +59,11 @@ export function syncBadge(ctx) {
   // Without a connection nothing is "synced": say plainly that data lives on this device only.
   const localOnly = transport?.configured === false;
   const unsent = (state.counts?.pending || 0) + (state.counts?.failed || 0);
-  const label = offline ? `離線・${state.counts?.pending ? `${state.counts.pending} 筆待上傳` : "本機可用"}` : localOnly ? `僅存本機${unsent ? `・${unsent} 筆` : ""}` : state.label;
-  return h("a", { href: "#/sync", className: `sync-badge sync-${offline ? "offline" : localOnly ? "pending" : state.state}`, dataset: { syncState: state.state }, "aria-label": `同步狀態：${label}` }, [h("i", { "aria-hidden": "true" }), h("span", { text: label })]);
+  // A failing connection names the problem instead of looking like "local only".
+  const error = !localOnly && !offline && (transport?.lastError || (transport?.needsSignIn ? "需要重新登入 Google" : ""));
+  const label = offline ? `離線・${state.counts?.pending ? `${state.counts.pending} 筆待上傳` : "本機可用"}` : localOnly ? `未設定同步${unsent ? `・${unsent} 筆只在本機` : ""}` : error ? "同步錯誤" : state.label;
+  const tone = offline ? "offline" : localOnly ? "pending" : error ? "failed" : state.state;
+  return h("a", { href: "#/sync", className: `sync-badge sync-${tone}`, title: error || "", dataset: { syncState: error ? "error" : state.state }, "aria-label": `同步狀態：${label}${error ? `（${error}）` : ""}` }, [h("i", { "aria-hidden": "true" }), h("span", { text: label })]);
 }
 
 export function updateShell(root, ctx, page) {

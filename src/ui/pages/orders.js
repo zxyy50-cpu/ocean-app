@@ -220,7 +220,7 @@ export function renderOrders(ctx, route) {
     }).filter(Boolean)) : h("section", { className: "card" }, [emptyState("沒有訂單")]);
   }
   return h("div", { className: "stack" }, [
-    pageHeader("訂單中心", customerFilter ? `只看：${ctx.model.customerName(customerFilter)}` : "訂單、品項與首次購買提醒。", [h("button", { type: "button", className: "primary", dataset: { addOrder: "" }, text: "＋ 新增訂單", onClick: () => newOrderDialog(ctx, customerFilter) })]),
+    pageHeader("訂單中心", customerFilter ? `只看：${ctx.model.customerName(customerFilter)}` : "訂單、品項與首次購買提醒。", [h("a", { className: "button primary", href: "#/line-order", dataset: { lineOrderEntry: "" }, text: "＋ LINE 訂單" }), h("button", { type: "button", className: "ghost", dataset: { addOrder: "" }, text: "手動新增", onClick: () => newOrderDialog(ctx, customerFilter) })]),
     tabs,
     body,
   ]);
