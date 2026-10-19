@@ -1,6 +1,6 @@
 import { requestId } from "../../core/ids.js";
 import {
-  blankItem, changeCustomer, customerChoices, customerText, draftChecks, itemGross, orderTotals, withTax, parseOrderMessage, pendingChecks, priceAlertText,
+  blankItem, changeCustomer, customerChoices, customerDisplayName, customerText, draftChecks, itemGross, orderTotals, withTax, parseOrderMessage, pendingChecks, priceAlertText,
   productCandidates, productLabel, salutationFor, secretaryText, updateItem,
 } from "../../data/order-intake.js";
 import { emptyReference } from "../../data/order-reference.js";
@@ -99,7 +99,7 @@ export function renderLineOrder(ctx) {
     } });
     return h("section", { className: "card", dataset: { lineCustomer: "" } }, [
       h("div", { className: "section-head" }, [
-        h("div", {}, [h("strong", { text: [customer.company, customer.contact].filter(Boolean).join(" ") || "客戶待確認" }), h("div", { className: "muted", text: customer.customerNo ? `客戶編號 ${customer.customerNo}` : "客戶編號待確認" })]),
+        h("div", {}, [h("strong", { text: customerDisplayName(draft) || "客戶待確認" }), h("div", { className: "muted", text: customer.customerNo ? `客戶編號 ${customer.customerNo}` : "客戶編號待確認" })]),
         badge(customer.status === "確定" ? "客戶已對應" : "客戶待確認", customer.status === "確定" ? "ok" : "warn"),
       ]),
       h("small", { className: "muted", text: customer.why }),

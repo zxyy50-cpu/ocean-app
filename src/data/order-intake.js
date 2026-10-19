@@ -194,6 +194,8 @@ const QTY_PATTERNS = [
   new RegExp(`(${NUM})\\s*(${UNITS})`, "iu"),
   // 「TSA 3」: a bare number after the name, separated by a space, at the end of the item.
   /(?<=[A-Za-z一-鿿)）]\s+)(\d{1,4})\s*$/u,
+  // 「羊血1」: a small number right after a Chinese name (screenshots lose the space).
+  /(?<=[一-鿿])(\d{1,3})\s*$/u,
 ];
 
 function findQuantity(fragment) {
@@ -244,7 +246,9 @@ function splitByQuantities(part) {
 
 function splitFragments(text) {
   const fragments = [];
-  for (const sentence of text.split(/[。；;\n!！?？]+/u)) {
+  // A screenshot joins lines: 「羊血1 單獨一張發票」 → the note starts its own sentence.
+  const separated = text.replace(/\s+(?=單獨|隨貨|統編|謝謝|感謝|地址|收件|麻煩您|效期|扣款|急用|請於|請在)/gu, "\n");
+  for (const sentence of separated.split(/[。；;\n!！?？]+/u)) {
     let parts = sentence.split(/[、，,]|還有|以及|另外|再加|然後|(?:跟|和)(?![您你妳])/u);
     // 「兩瓶羊血及一瓶蛋黃液」: 及 joins two items only when both sides carry a quantity.
     parts = parts.flatMap((part) => {
@@ -674,8 +678,10 @@ const money = (value) => (Number.isInteger(round(value, 4)) ? round(value).toLoc
 const roundedMoney = (value) => `${Number.isInteger(round(value, 2)) ? "" : "約 "}${Math.round(value).toLocaleString("en-US")}`;
 const itemLabel = (item) => [item.code || "料號待確認", [item.name || item.said, item.nameZh ? `（${item.nameZh}）` : ""].join("")].join("｜");
 
+// 「興農 楊津銘」 already names the contact; do not print 楊津銘 twice.
 export function customerDisplayName(draft) {
-  return [draft.customer.company, draft.customer.contact].filter(Boolean).join(" ");
+  const { company = "", contact = "" } = draft.customer;
+  return contact && company.includes(contact) ? company : [company, contact].filter(Boolean).join(" ");
 }
 
 export function secretaryText(draft) {

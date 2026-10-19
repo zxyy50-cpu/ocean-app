@@ -1,6 +1,6 @@
 import { uuid } from "../core/ids.js";
 import { cleanText, comparisonKey } from "../core/text.js";
-import { aliasKey, lineOrderRows, LINE_ORDER_STATUSES, withTax } from "./order-intake.js";
+import { aliasKey, customerDisplayName, lineOrderRows, LINE_ORDER_STATUSES, withTax } from "./order-intake.js";
 import { emptyReference, normalizeReference, tablesToRecords } from "./order-reference.js";
 import { readSetting, saveSetting } from "./settings.js";
 
@@ -40,6 +40,7 @@ export function explainServerError(error) {
   if (/Unknown action/i.test(message)) return "Apps Script 還是舊版本，沒有訂單功能：請更新並重新部署 Apps Script（同步中心 →「測試連線」可看細節）";
   if (/OCEAN_COMPANY_SPREADSHEET_ID/.test(message)) return "Apps Script 還沒設定公司試算表：請在指令碼屬性加上 OCEAN_COMPANY_SPREADSHEET_ID";
   if (/找不到分頁/.test(message)) return message;
+  if (/drive\.files|權限：\(https:\/\/www\.googleapis\.com\/auth\/drive/i.test(message)) return "Apps Script 還沒有 Drive 權限，截圖辨識無法使用：到 Apps Script 編輯器執行一次並按「允許」，再重新部署新版本";
   if (error?.auth) return `Google 登入問題：${message}`;
   return message || "讀取失敗";
 }
@@ -106,7 +107,7 @@ export async function saveLineOrder(db, draft, requestId) {
   const appIds = draft.items.map((_, index) => `L${draft.date.replaceAll("-", "").slice(2)}-${orderKey}-${index + 1}`);
   const result = await db.transact(requestId, async (tx) => {
     const order = await tx.create("order", {
-      orderNo: `LINE-${orderKey}`, customerId: draft.customer.customerId || "", customerNo: draft.customer.customerNo || "", customerName: [draft.customer.company, draft.customer.contact].filter(Boolean).join(" "),
+      orderNo: `LINE-${orderKey}`, customerId: draft.customer.customerId || "", customerNo: draft.customer.customerNo || "", customerName: customerDisplayName(draft),
       orderDate: draft.date, status: "待確認", source: "LINE", deliveryMethod: draft.delivery.value, taxType: draft.taxType.value,
       notes: [...draft.notes, draft.shipTime].filter(Boolean).join("；"), rawMessage: draft.raw, sourceRef: "line-sheet:pending",
     });
@@ -189,6 +190,6 @@ export async function recognizeImage(transport, file) {
     const response = await transport.call("ocr", { imageBase64: base64, mimeType: file.type || "image/png" });
     return { ok: true, text: String(response.text || "").trim() };
   } catch (error) {
-    return { ok: false, message: error.message || "辨識失敗" };
+    return { ok: false, message: explainServerError(error) || "辨識失敗" };
   }
 }
