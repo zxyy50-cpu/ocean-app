@@ -73,6 +73,58 @@
   }
 }
 
+/* 波西米亞 — sand and cream, terracotta, mustard, sage and dusty rose; woven stripes and a fringe */
+:root[data-skin="boho"] {
+  --bg: #f6ede1; --surface: #fffaf2; --surface-2: #faf1e4; --ink: #3b2a22; --muted: #8a7262; --line: #e9d6c0;
+  --accent: #b3553a; --accent-ink: #fffaf2; --accent-soft: #f5ddd0; --warn: #b8691f; --warn-soft: #f7e3c6;
+  --danger: #a8402f; --danger-soft: #f6d9d2; --ok: #687c4c; --ok-soft: #e5e9d5; --info: #7b5a8c; --info-soft: #ece2f0;
+  --sun: #d8a23e; --sun-ink: #3b2a22; --melon: #c77d83; --leaf: #7f9160;
+  --hero: linear-gradient(120deg, #b3553a 0%, #c77d83 48%, #d8a23e 100%);
+  --weave: repeating-linear-gradient(90deg, #b3553a 0 14px, #d8a23e 14px 24px, #7f9160 24px 34px, #c77d83 34px 44px, #f6ede1 44px 48px);
+  --radius: 20px; --radius-sm: 14px;
+  --shadow: 0 1px 2px rgba(59, 42, 34, 0.06), 0 10px 24px rgba(179, 85, 58, 0.08);
+  --heading-font: "Noto Serif TC", "Songti TC", "PMingLiU", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="boho"]:not([data-theme="light"]) {
+    --bg: #1f1814; --surface: #2a201b; --surface-2: #31261f; --ink: #f3e6d6; --muted: #b39d8b; --line: #43342a;
+    --accent: #e08a68; --accent-ink: #2a120a; --accent-soft: #46291f; --warn: #e8aa5c; --warn-soft: #3d2b17;
+    --ok: #a9bd84; --ok-soft: #2c3322; --info: #c3a2d2; --info-soft: #33263b; --sun: #e8b85a; --sun-ink: #2a1d10;
+    --melon: #dd9aa0; --leaf: #a9bd84; --hero: linear-gradient(120deg, #7c3524 0%, #7d4a50 50%, #8a6421 100%); --shadow: none;
+  }
+}
+/* A faint diamond weave behind everything, and woven stripes on the edges. */
+:root[data-skin="boho"] body {
+  background-color: var(--bg);
+  background-image: repeating-linear-gradient(45deg, rgba(179, 85, 58, 0.035) 0 2px, transparent 2px 22px), repeating-linear-gradient(-45deg, rgba(127, 145, 96, 0.035) 0 2px, transparent 2px 22px);
+}
+:root[data-skin="boho"] h1, :root[data-skin="boho"] h2, :root[data-skin="boho"] .action-main strong, :root[data-skin="boho"] .brand strong { font-family: var(--heading-font); font-weight: 700; letter-spacing: 0.02em; }
+:root[data-skin="boho"] .home-head { position: relative; margin-bottom: 18px; }
+/* The fringe: tassels hanging under the header, a thread and a bead each, in turning colours. */
+:root[data-skin="boho"] .home-head::after {
+  content: ""; position: absolute; left: 18px; right: 18px; top: 100%; height: 16px;
+  background:
+    radial-gradient(circle at 9px 12px, var(--accent) 0 3.5px, transparent 4px) 0 0 / 54px 16px repeat-x,
+    radial-gradient(circle at 27px 12px, var(--sun) 0 3.5px, transparent 4px) 0 0 / 54px 16px repeat-x,
+    radial-gradient(circle at 45px 12px, var(--leaf) 0 3.5px, transparent 4px) 0 0 / 54px 16px repeat-x,
+    linear-gradient(90deg, transparent 8px, var(--muted) 8px 10px, transparent 10px) 0 0 / 18px 10px repeat-x;
+  opacity: 0.9;
+}
+:root[data-skin="boho"] .capture-entry { background: var(--hero); }
+:root[data-skin="boho"] .topbar { border-image: var(--weave) 1; }
+:root[data-skin="boho"] .sidebar { border-right: 5px solid; border-image: repeating-linear-gradient(180deg, #b3553a 0 14px, #d8a23e 14px 24px, #7f9160 24px 34px, #c77d83 34px 44px, #f6ede1 44px 48px) 1; }
+:root[data-skin="boho"] .topbar { border-bottom-width: 4px; border-bottom-style: solid; }
+:root[data-skin="boho"] .bottom-nav { border-top: 4px solid; border-image: var(--weave) 1; }
+:root[data-skin="boho"] .card { border-color: var(--line); }
+:root[data-skin="boho"] .page-header h1::after { content: " ✺"; color: var(--sun); font-size: 0.8em; }
+:root[data-skin="boho"] .action-card:nth-of-type(4n + 1) { border-left: 5px solid var(--accent); }
+:root[data-skin="boho"] .action-card:nth-of-type(4n + 2) { border-left: 5px solid var(--sun); }
+:root[data-skin="boho"] .action-card:nth-of-type(4n + 3) { border-left: 5px solid var(--leaf); }
+:root[data-skin="boho"] .action-card:nth-of-type(4n + 4) { border-left: 5px solid var(--melon); }
+:root[data-skin="boho"] .action-card.is-late { border-left-color: var(--danger); }
+:root[data-skin="boho"] .badge { border-radius: 999px; }
+:root[data-skin="boho"] button.primary, :root[data-skin="boho"] .button.primary { box-shadow: inset 0 -3px 0 rgba(59, 42, 34, 0.18); }
+
 /* Shared skin touches (only where a skin defines them). */
 :root[data-skin] .home-head { background: var(--hero, transparent); color: #fff; padding: 18px 16px; border-radius: var(--radius); }
 :root[data-skin] .home-head .muted { color: rgba(255, 255, 255, 0.85); }

@@ -10,6 +10,7 @@ export const SKINS = Object.freeze([
   { id: "notebook", label: "溫暖手帳", hint: "紙質底色、襯線標題", colors: ["#f5efe3", "#fffbf3", "#b5523b", "#2b2a33"] },
   { id: "cockpit", label: "深色駕駛艙", hint: "深色底、晚上不刺眼", colors: ["#0e151b", "#16202a", "#4fe3b5", "#f5b547"] },
   { id: "bold", label: "活力品牌", hint: "藍色標頭、珊瑚色按鈕", colors: ["#2e3fb8", "#eef1fa", "#ffffff", "#ff6b4a"] },
+  { id: "boho", label: "波西米亞", hint: "陶土紅、芥末黃、鼠尾草綠、編織流蘇", colors: ["#b3553a", "#d8a23e", "#7f9160", "#c77d83"] },
 ]);
 
 export function currentSkin() {
