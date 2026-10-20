@@ -1,6 +1,8 @@
 import { globalSearch, snippet } from "../../data/search.js";
 import { loadReference } from "../../data/line-orders.js";
 import { quoteCandidates } from "../../data/quote.js";
+import { familyIndex, familyLead } from "../../data/company-family.js";
+import { comparisonKey } from "../../core/text.js";
 import { opportunityTitle } from "../../data/products.js";
 import { openMergeGroupDialog } from "../forms/merge-group.js";
 import { customerIdentity } from "../../data/model.js";
@@ -15,10 +17,28 @@ export function resetSearchState() {
   catalog = null;
 }
 
+// Records of one company (factories, names from other lists) show as one row, the main record first.
+function companyRows(ctx, hits) {
+  const { familyOf } = familyIndex(ctx.model);
+  const seen = new Set();
+  const rows = [];
+  for (const { customer, outsideMyAreas } of hits) {
+    if (seen.has(customer.id)) continue;
+    const members = familyOf.get(customer.id) || [customer];
+    members.forEach((member) => seen.add(member.id));
+    const lead = familyLead(ctx.model, members, customer);
+    rows.push({ lead, others: members.filter((member) => member.id !== lead.id), outsideMyAreas });
+  }
+  return rows;
+}
+
 // 產品 (商品清單): each row opens 產品報價 with that product already added.
+// Only products whose text contains the whole query: 「第一」 must not match 「一次增殖」.
 function productGroup(query) {
   if (!catalog?.productList?.length) return null;
-  const found = quoteCandidates(catalog, query, 6);
+  const key = comparisonKey(query);
+  const found = quoteCandidates(catalog, query, 12).filter((product) => comparisonKey(`${product.code} ${product.name} ${product.nameZh} ${product.spec}`).includes(key)).slice(0, 6);
+  if (!found.length) return null;
   return group("產品（報價）", found.length, found.length, found.map((product) => h("li", {}, [h("a", { href: `#/line-order?mode=quote&code=${encodeURIComponent(product.code)}`, dataset: { searchProduct: product.code } }, [
     h("strong", {}, highlight(`${product.code}｜${product.name}`, query)),
     h("small", { className: "muted", text: [product.nameZh, product.spec, product.listPrice !== null ? `定價 ${money(product.listPrice)}` : "定價未填"].filter(Boolean).join("・") }),
@@ -74,10 +94,22 @@ export function renderSearch(ctx, route) {
       return h("button", { type: "button", className: "small ghost", dataset: { tidyGroup: customer.id }, text: `同名 ${twins.length} 筆・整理`, onClick: () => openMergeGroupDialog(ctx, twins, { onDone: () => { ctx.rebuild(); draw(); } }) });
     };
     const sections = [
-      group("客戶", found.totals.customers, found.customers.length, found.customers.map(({ customer, outsideMyAreas }) => h("li", { className: "result-with-action" }, [h("a", { href: `#/customer/${encodeURIComponent(customer.id)}` }, [
-        h("strong", {}, highlight(customer.name, query)),
-        h("small", { className: "muted", text: [customerIdentity(ctx.model, customer), outsideMyAreas ? "非我的區域" : ""].filter(Boolean).join("・") }),
-      ]), tidyButton(customer)]))),
+      (() => {
+        const rows = companyRows(ctx, found.customers);
+        return group("客戶", found.totals.customers, found.customers.length, rows.map(({ lead, others, outsideMyAreas }) => h("li", { className: "result-with-action", dataset: { searchCompany: lead.id } }, [
+          h("div", { className: "search-company" }, [
+            h("a", { href: `#/customer/${encodeURIComponent(lead.id)}` }, [
+              h("strong", {}, highlight(lead.name, query)),
+              h("small", { className: "muted", text: [customerIdentity(ctx.model, lead), outsideMyAreas ? "非我的區域" : ""].filter(Boolean).join("・") }),
+            ]),
+            others.length ? h("details", { className: "search-family", dataset: { searchFamily: lead.id } }, [
+              h("summary", { text: `同公司另有 ${others.length} 筆（工廠或其他名單上的名稱）` }),
+              h("ul", {}, others.map((customer) => h("li", {}, [h("a", { href: `#/customer/${encodeURIComponent(customer.id)}` }, [h("span", {}, highlight(customer.name, query)), h("small", { className: "muted", text: customerIdentity(ctx.model, customer) })])]))),
+            ]) : null,
+          ]),
+          tidyButton(lead),
+        ])));
+      })(),
       group("拜訪內容", found.totals.activities, found.activities.length, found.activities.map(({ activity, text }) => h("li", {}, [h("a", { href: `#/customer/${encodeURIComponent(activity.customerId)}` }, [
         h("strong", { text: `${ctx.model.customerName(activity.customerId)}・${activity.activityDate} ${activity.channel || ""}` }),
         h("span", {}, highlight(text, query)),
