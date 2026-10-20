@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./styles/themes.css">
   <script>
     // Apply the chosen skin before first paint (default: 夏日繽紛).
-    try { var skin = localStorage.getItem("ocean-skin") || "summer"; if (skin !== "classic") document.documentElement.setAttribute("data-skin", skin); }
+    try { var skin = localStorage.getItem("ocean-skin") || "summer"; if (["summer", "ocean", "fantasy", "wizard", "boho", "cockpit"].indexOf(skin) < 0) skin = "summer"; document.documentElement.setAttribute("data-skin", skin); }
     catch (error) { document.documentElement.setAttribute("data-skin", "summer"); }
   </script>
 </head>

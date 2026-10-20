@@ -36,21 +36,6 @@
   }
 }
 
-/* 溫暖手帳 — paper, ink and a terracotta stamp */
-:root[data-skin="notebook"] {
-  --bg: #f5efe3; --surface: #fffbf3; --surface-2: #fbf5e9; --ink: #2b2a33; --muted: #85796a; --line: #e2d7c3;
-  --accent: #b5523b; --accent-ink: #ffffff; --accent-soft: #f6e2d9; --warn: #a3561a; --warn-soft: #f7e6d2;
-  --ok: #5e7a5a; --ok-soft: #e5ecdf; --sun: #2b2a33; --sun-ink: #f5efe3; --melon: #b5523b; --leaf: #5e7a5a;
-  --hero: #2b2a33; --radius: 12px; --radius-sm: 8px; --shadow: none;
-  --heading-font: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-skin="notebook"]:not([data-theme="light"]) {
-    --bg: #1d1b19; --surface: #26231f; --surface-2: #2c2924; --ink: #efe6d6; --muted: #a8998a; --line: #3a352e;
-    --accent: #e08a6f; --accent-ink: #2b1209; --accent-soft: #3d2a22; --hero: #3a352e; --sun: #efe6d6; --sun-ink: #1d1b19;
-  }
-}
-
 /* 深色駕駛艙 — always dark, mint numbers */
 :root[data-skin="cockpit"] {
   --bg: #0e151b; --surface: #16202a; --surface-2: #1a2632; --ink: #e8eef2; --muted: #8597a4; --line: #24313b;
@@ -58,19 +43,6 @@
   --danger: #ff8a7a; --danger-soft: #3d1d1a; --ok: #4fe3b5; --ok-soft: #143a31; --info: #7fb2ff; --info-soft: #18283f;
   --sun: #4fe3b5; --sun-ink: #062b20; --melon: #f5b547; --leaf: #4fe3b5; --hero: #16202a; --shadow: none;
   color-scheme: dark;
-}
-
-/* 活力品牌 — a bold blue header and a coral action button */
-:root[data-skin="bold"] {
-  --bg: #eef1fa; --surface: #ffffff; --surface-2: #f6f8fe; --ink: #1b2140; --muted: #626a8c; --line: #dce1f2;
-  --accent: #2e3fb8; --accent-ink: #ffffff; --accent-soft: #e3e7fb; --warn: #c2410c; --warn-soft: #ffedd5;
-  --sun: #ff6b4a; --sun-ink: #ffffff; --melon: #ff6b4a; --leaf: #2e3fb8; --hero: #2e3fb8; --radius: 16px;
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-skin="bold"]:not([data-theme="light"]) {
-    --bg: #0f1226; --surface: #181c36; --surface-2: #1d2240; --ink: #e7e9f7; --muted: #9aa0c2; --line: #2a2f52;
-    --accent: #8d9bff; --accent-ink: #0f1226; --accent-soft: #252b55; --hero: #232a6b; --shadow: none;
-  }
 }
 
 /* 波西米亞 — sand and cream, terracotta, mustard, sage and dusty rose; woven stripes and a fringe */
@@ -125,6 +97,134 @@
 :root[data-skin="boho"] .badge { border-radius: 999px; }
 :root[data-skin="boho"] button.primary, :root[data-skin="boho"] .button.primary { box-shadow: inset 0 -3px 0 rgba(59, 42, 34, 0.18); }
 
+/* 深海 — sunlit water above, deep blue below; whales and dolphins swim behind the cards */
+:root[data-skin="ocean"] {
+  --bg: #dff2f8; --surface: rgba(255, 255, 255, 0.92); --surface-2: #f1fafd; --ink: #0d3247; --muted: #4f7489; --line: #c3e3ee;
+  --accent: #0b6f96; --accent-ink: #ffffff; --accent-soft: #d3eef7; --warn: #c8562e; --warn-soft: #fde6dc;
+  --ok: #138a6b; --ok-soft: #d8f3ea; --info: #4a56c8; --info-soft: #e6e8fb;
+  --sun: #ffcf5c; --sun-ink: #3a2a00; --melon: #ff8a7a; --leaf: #2bb3a3;
+  --hero: linear-gradient(135deg, #0b6f96 0%, #1f8fb3 55%, #36b6c9 100%);
+  --sea-top: #e9f8fc; --sea-bottom: #9ccfe2; --creature: #0f4a66; --creature-light: #f4fbfe;
+  --radius: 18px; --radius-sm: 12px;
+  --shadow: 0 1px 2px rgba(13, 50, 71, 0.06), 0 10px 26px rgba(11, 111, 150, 0.10);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="ocean"]:not([data-theme="light"]) {
+    --bg: #04131d; --surface: rgba(9, 32, 46, 0.92); --surface-2: #0c2a3b; --ink: #e2f4fb; --muted: #8fb4c6; --line: #16384b;
+    --accent: #4cc6e6; --accent-ink: #032231; --accent-soft: #0f3a4d; --warn: #ff9e7c; --warn-soft: #3a2017;
+    --ok: #5fdcb6; --ok-soft: #0f3a30; --hero: linear-gradient(135deg, #07405a 0%, #0b5b78 100%);
+    --sea-top: #0a2c40; --sea-bottom: #020b12; --creature: #6fb9d6; --creature-light: #0a2232; --shadow: none;
+  }
+}
+:root[data-skin="ocean"] .sidebar { background: #f4fbfe; }
+@media (prefers-color-scheme: dark) { :root[data-skin="ocean"]:not([data-theme="light"]) .sidebar { background: #071c28; } }
+:root[data-skin="fantasy"] .sidebar { background: #1b1512; }
+:root[data-skin="wizard"] .sidebar { background: #1d1834; }
+:root[data-skin="ocean"] body { background:linear-gradient(180deg, var(--sea-top) 0%, var(--bg) 35%, var(--sea-bottom) 100%) fixed; }
+
+/* 龍焰奇幻 — dark stone, blood red and old gold; embers rise, a dragon passes */
+:root[data-skin="fantasy"] {
+  --bg: #15110f; --surface: rgba(32, 25, 21, 0.94); --surface-2: #2a201b; --ink: #ecdcc2; --muted: #a8937b; --line: #46352a;
+  --accent: #b3261e; --accent-ink: #fff3e6; --accent-soft: #3d1815; --warn: #e0a43c; --warn-soft: #3a2a12;
+  --danger: #ff6f5e; --danger-soft: #3d1714; --ok: #8fb36a; --ok-soft: #26301b; --info: #9db4d6; --info-soft: #1d2533;
+  --sun: #c9a24a; --sun-ink: #1d140c; --melon: #d4553f; --leaf: #8fb36a;
+  --hero: linear-gradient(135deg, #5c120e 0%, #2a0b09 60%, #15110f 100%);
+  --gold: #c9a24a; --heading-font: "Noto Serif TC", "Songti TC", "PMingLiU", Georgia, serif;
+  --radius: 10px; --radius-sm: 6px; --shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+:root[data-skin="fantasy"] body { background: radial-gradient(ellipse at 50% 120%, #4a1410 0%, transparent 55%), radial-gradient(ellipse at 50% -10%, #2a2420 0%, transparent 60%), var(--bg) fixed; }
+:root[data-skin="fantasy"] .card, :root[data-skin="fantasy"] .action-card, :root[data-skin="fantasy"] .kpi-goal, :root[data-skin="fantasy"] .plan-card { border: 1px solid rgba(201, 162, 74, 0.35); box-shadow: inset 0 0 0 3px rgba(21, 17, 15, 0.6), inset 0 0 0 4px rgba(201, 162, 74, 0.18), var(--shadow); }
+:root[data-skin="fantasy"] .home-head { border: 1px solid rgba(201, 162, 74, 0.55); }
+:root[data-skin="fantasy"] .page-header h1::before, :root[data-skin="fantasy"] .page-header h1::after { content: "❖"; color: var(--gold); font-size: 0.6em; vertical-align: middle; margin: 0 0.4em; }
+:root[data-skin="fantasy"] .sidebar { border-right: 1px solid rgba(201, 162, 74, 0.4); }
+
+/* 魔法學院 — a starry castle night, parchment gold and burgundy; candles float, an owl brings the post */
+:root[data-skin="wizard"] {
+  --bg: #171329; --surface: rgba(35, 29, 58, 0.93); --surface-2: #2a2246; --ink: #f1e6cf; --muted: #b3a6c9; --line: #3d3360;
+  --accent: #d4a944; --accent-ink: #1a1326; --accent-soft: #3b3150; --warn: #e88a5a; --warn-soft: #3d2620;
+  --danger: #ff7b7b; --danger-soft: #3d1c24; --ok: #7fc4a0; --ok-soft: #1f3a33; --info: #9fb3ff; --info-soft: #262c4d;
+  --sun: #d4a944; --sun-ink: #1a1326; --melon: #b0303f; --leaf: #4f9a76;
+  --hero: linear-gradient(135deg, #7a1f2b 0%, #3b2350 60%, #1f1a3a 100%);
+  --gold: #d4a944; --heading-font: "Noto Serif TC", "Songti TC", "PMingLiU", Georgia, serif;
+  --radius: 14px; --radius-sm: 10px; --shadow: 0 8px 24px rgba(5, 3, 15, 0.5);
+  color-scheme: dark;
+}
+:root[data-skin="wizard"] body { background: radial-gradient(ellipse at 20% 0%, #2d2452 0%, transparent 55%), radial-gradient(ellipse at 90% 10%, #3a1d3f 0%, transparent 45%), var(--bg) fixed; }
+:root[data-skin="wizard"] .card, :root[data-skin="wizard"] .action-card, :root[data-skin="wizard"] .kpi-goal, :root[data-skin="wizard"] .plan-card { border: 1px solid rgba(212, 169, 68, 0.3); }
+:root[data-skin="wizard"] .page-header h1::after { content: " ✦"; color: var(--gold); font-size: 0.7em; }
+:root[data-skin="wizard"] .home-head { border: 1px solid rgba(212, 169, 68, 0.5); }
+
+:root[data-skin="fantasy"] h1, :root[data-skin="fantasy"] h2, :root[data-skin="fantasy"] .action-main strong, :root[data-skin="fantasy"] .brand strong,
+:root[data-skin="wizard"] h1, :root[data-skin="wizard"] h2, :root[data-skin="wizard"] .action-main strong, :root[data-skin="wizard"] .brand strong { font-family: var(--heading-font); font-weight: 700; letter-spacing: 0.03em; }
+:root[data-skin="fantasy"] h1, :root[data-skin="wizard"] h1 { color: var(--gold); }
+:root[data-skin="ocean"] .capture-entry, :root[data-skin="fantasy"] .capture-entry, :root[data-skin="wizard"] .capture-entry { background: var(--hero); }
+
+/* ---- The moving backdrop (skin-decor.js) ---- */
+:root[data-skin="ocean"] .shell, :root[data-skin="fantasy"] .shell, :root[data-skin="wizard"] .shell { position: relative; z-index: 1; }
+.skin-decor, .skin-decor-front { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.skin-decor-front { z-index: 15; }
+.skin-decor-front .flyer { --flyer-opacity: 0.6; }
+:root:not([data-skin="ocean"]):not([data-skin="fantasy"]):not([data-skin="wizard"]) :is(.skin-decor, .skin-decor-front) { display: none; }
+
+/* Sea */
+.skin-decor .rays { position: absolute; inset: 0 0 auto 0; height: 60%; background: repeating-linear-gradient(100deg, rgba(255, 255, 255, 0.16) 0 40px, transparent 40px 140px); mask-image: linear-gradient(180deg, #000, transparent); animation: rays 14s ease-in-out infinite alternate; }
+.skin-decor .seabed { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; background: radial-gradient(ellipse at 20% 100%, rgba(15, 74, 102, 0.25) 0 40%, transparent 41%), radial-gradient(ellipse at 70% 100%, rgba(15, 74, 102, 0.2) 0 35%, transparent 36%); }
+.swimmer { position: absolute; left: 0; top: var(--top); width: var(--w); opacity: 0.42; animation: swim var(--dur) linear var(--delay) infinite; will-change: transform; }
+.swimmer.left { animation-name: swim-left; }
+.swimmer .bob { animation: bob 5s ease-in-out infinite alternate; }
+.swimmer.k-dolphin .bob { animation: leap 3.2s ease-in-out infinite; }
+.swimmer svg { display: block; width: 100%; height: auto; }
+.swimmer .c { fill: var(--creature); }
+.swimmer .l { fill: var(--creature-light); }
+.swimmer .w { fill: var(--creature-light); stroke: var(--creature); stroke-width: 1.5; }
+.swimmer .g { fill: none; stroke: var(--creature-light); stroke-width: 1.2; opacity: 0.6; }
+.bubble { position: absolute; left: var(--x); bottom: -20px; width: var(--s); height: var(--s); border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.15); animation: rise var(--dur) linear var(--delay) infinite; }
+@keyframes swim { from { transform: translateX(-35vw); } to { transform: translateX(115vw); } }
+@keyframes swim-left { from { transform: translateX(115vw) scaleX(-1); } to { transform: translateX(-35vw) scaleX(-1); } }
+@keyframes bob { from { transform: translateY(-6px) rotate(-1.5deg); } to { transform: translateY(6px) rotate(1.5deg); } }
+@keyframes leap { 0%, 100% { transform: translateY(0) rotate(0); } 40% { transform: translateY(-26px) rotate(-12deg); } 70% { transform: translateY(8px) rotate(10deg); } }
+@keyframes rise { from { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } to { transform: translate(18px, -110vh); opacity: 0; } }
+@keyframes rays { from { transform: translateX(-30px); opacity: 0.7; } to { transform: translateX(30px); opacity: 1; } }
+
+/* Fire */
+.skin-decor .haze { position: absolute; left: 0; right: 0; bottom: 0; height: 35%; background: linear-gradient(0deg, rgba(120, 30, 16, 0.35), transparent); }
+.ember { position: absolute; left: var(--x); bottom: -10px; width: var(--s); height: var(--s); border-radius: 50%; background: #ffb347; box-shadow: 0 0 6px 2px rgba(255, 120, 40, 0.8); animation: ember var(--dur) ease-in var(--delay) infinite; }
+@keyframes ember { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translate(var(--drift), -95vh); opacity: 0; } }
+
+/* Flyers: a dragon or an owl crossing now and then */
+.flyer { position: absolute; left: 0; top: 7%; width: 220px; opacity: 0; animation: fly 48s linear -6s infinite; }
+.flyer.owl { width: 90px; top: 14%; animation-duration: 36s; animation-delay: -4s; }
+.flyer-art { display: block; width: 100%; height: auto; }
+.flyer.dragon { width: 300px; }
+.dragon .flyer-art { filter: drop-shadow(0 0 6px rgba(255, 120, 40, 0.7)); }
+.dragon .c { fill: #4a120d; }
+.dragon .wing { fill: #6e1c14; }
+.dragon .eye { fill: #ffb347; }
+.owl .c, .owl .wing { fill: #c9a87a; }
+.owl .eye { fill: #1a1326; }
+.flyer .wing { transform-box: fill-box; transform-origin: 50% 100%; animation: flap 0.7s ease-in-out infinite alternate; }
+.flyer .wing.back { animation-delay: -0.35s; opacity: 0.8; }
+.owl .wing { transform-origin: 100% 60%; animation-duration: 0.45s; }
+.owl .wing.right { transform-origin: 0 60%; }
+@keyframes fly { 0% { transform: translate(-30vw, 30px); opacity: 0; } 2% { opacity: var(--flyer-opacity, 0.85); } 30% { transform: translate(110vw, -40px); opacity: var(--flyer-opacity, 0.85); } 31%, 100% { transform: translate(110vw, -40px); opacity: 0; } }
+@keyframes flap { from { transform: scaleY(1); } to { transform: scaleY(-0.55); } }
+
+/* Night sky */
+.twinkle-star { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); border-radius: 50%; background: #fff6d8; box-shadow: 0 0 4px rgba(255, 246, 216, 0.9); animation: twinkle var(--dur) ease-in-out var(--delay) infinite alternate; }
+.candle { position: absolute; left: var(--x); top: var(--y); width: 8px; height: var(--h); border-radius: 2px; background: linear-gradient(90deg, #efe2c4, #fff8e6 45%, #d9c9a4); opacity: 0.75; animation: hover var(--dur) ease-in-out var(--delay) infinite alternate; }
+.candle::before { content: ""; position: absolute; left: 50%; top: -12px; width: 7px; height: 11px; margin-left: -3.5px; border-radius: 50% 50% 50% 50% / 65% 65% 35% 35%; background: radial-gradient(circle at 50% 70%, #fff 0 20%, #ffd36b 40%, rgba(255, 140, 40, 0) 75%); box-shadow: 0 0 14px 6px rgba(255, 190, 80, 0.35); animation: flicker 0.18s ease-in-out infinite alternate; }
+@keyframes twinkle { from { opacity: 0.2; transform: scale(0.7); } to { opacity: 1; transform: scale(1.15); } }
+@keyframes hover { from { transform: translateY(-8px); } to { transform: translateY(10px); } }
+@keyframes flicker { from { transform: scale(1, 1) rotate(-3deg); } to { transform: scale(0.9, 1.08) rotate(3deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .skin-decor *, .skin-decor *::before, .skin-decor-front * { animation: none !important; }
+  .swimmer { transform: translateX(var(--rest)); }
+  .swimmer.left { transform: translateX(var(--rest)) scaleX(-1); }
+  .bubble, .ember, .flyer { display: none; }
+}
+
 /* Shared skin touches (only where a skin defines them). */
 :root[data-skin] .home-head { background: var(--hero, transparent); color: #fff; padding: 18px 16px; border-radius: var(--radius); }
 :root[data-skin] .home-head .muted { color: rgba(255, 255, 255, 0.85); }
@@ -137,9 +237,6 @@
 :root[data-skin="summer"] .action-card:nth-of-type(4n + 3) { border-left: 5px solid var(--melon); }
 :root[data-skin="summer"] .action-card:nth-of-type(4n + 4) { border-left: 5px solid var(--leaf); }
 :root[data-skin="summer"] .action-card.is-late { border-left-color: var(--melon); }
-:root[data-skin="notebook"] h1, :root[data-skin="notebook"] h2, :root[data-skin="notebook"] .action-main strong { font-family: var(--heading-font); font-weight: 600; }
-:root[data-skin="notebook"] .action-card { border-left: 4px solid var(--accent); border-radius: 4px var(--radius) var(--radius) 4px; }
-:root[data-skin="notebook"] .bottom-nav { border-top-style: dashed; }
 
 /* Appearance picker in 設定 */
 .skin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
