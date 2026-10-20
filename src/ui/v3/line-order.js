@@ -85,17 +85,27 @@ export function renderLineOrder(ctx, route) {
   };
   text.addEventListener("input", () => { state.text = text.value; persist(ctx); });
 
-  const imageInput = h("input", { type: "file", accept: "image/*", hidden: true, dataset: { lineImage: "" }, onChange: async () => {
-    const file = imageInput.files?.[0];
-    if (!file) return;
+  // A failed screenshot can be tried again with one tap (Google sometimes refuses once and then works).
+  const readImage = async (file) => {
     status.textContent = "辨識截圖文字中…";
     const result = await recognizeImage(ctx.transport, file);
-    imageInput.value = "";
-    if (!result.ok) { status.textContent = result.message; return; }
+    if (!result.ok) {
+      status.replaceChildren(
+        h("span", { text: result.message }), " ",
+        h("button", { type: "button", className: "small ghost", dataset: { lineImageRetry: "" }, text: "再試一次", onClick: () => readImage(file) }),
+        result.detail && result.detail !== result.message ? h("details", { className: "muted" }, [h("summary", { text: "技術細節" }), h("small", { dataset: { lineImageError: "" }, text: result.detail })]) : null,
+      );
+      return;
+    }
     text.value = [text.value.trim(), result.text].filter(Boolean).join("\n");
     state.text = text.value;
     status.textContent = "截圖文字已放進上面，請先看一下有沒有辨識錯字，再按「辨識訂單」。";
     persist(ctx);
+  };
+  const imageInput = h("input", { type: "file", accept: "image/*", hidden: true, dataset: { lineImage: "" }, onChange: async () => {
+    const file = imageInput.files?.[0];
+    imageInput.value = "";
+    if (file) await readImage(file);
   } });
 
   function customerCard(draft) {

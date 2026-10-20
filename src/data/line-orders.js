@@ -202,6 +202,7 @@ export async function recognizeImage(transport, file) {
     const response = await transport.call("ocr", { imageBase64: base64, mimeType: file.type || "image/png" });
     return { ok: true, text: String(response.text || "").trim() };
   } catch (error) {
-    return { ok: false, message: explainServerError(error) || "辨識失敗" };
+    // Keep Google's own words too: the short explanation alone made a passing failure hard to trace.
+    return { ok: false, message: explainServerError(error) || "辨識失敗", detail: String(error?.message || error || "") };
   }
 }
