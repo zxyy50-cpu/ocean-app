@@ -170,7 +170,7 @@
 /* Sea */
 .skin-decor .rays { position: absolute; inset: 0 0 auto 0; height: 60%; background: repeating-linear-gradient(100deg, rgba(255, 255, 255, 0.16) 0 40px, transparent 40px 140px); mask-image: linear-gradient(180deg, #000, transparent); animation: rays 14s ease-in-out infinite alternate; }
 .skin-decor .seabed { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; background: radial-gradient(ellipse at 20% 100%, rgba(15, 74, 102, 0.25) 0 40%, transparent 41%), radial-gradient(ellipse at 70% 100%, rgba(15, 74, 102, 0.2) 0 35%, transparent 36%); }
-.swimmer { position: absolute; left: 0; top: var(--top); width: var(--w); opacity: 0.42; animation: swim var(--dur) linear var(--delay) infinite; will-change: transform; }
+.swimmer { position: absolute; left: 0; top: var(--top); width: var(--w); opacity: 0.62; animation: swim var(--dur) linear var(--delay) infinite; will-change: transform; }
 .swimmer.left { animation-name: swim-left; }
 .swimmer .bob { animation: bob 5s ease-in-out infinite alternate; }
 .swimmer.k-dolphin .bob { animation: leap 3.2s ease-in-out infinite; }
@@ -194,19 +194,16 @@
 
 /* Flyers: a dragon or an owl crossing now and then */
 .flyer { position: absolute; left: 0; top: 7%; width: 220px; opacity: 0; animation: fly 48s linear -6s infinite; }
-.flyer.owl { width: 90px; top: 14%; animation-duration: 36s; animation-delay: -4s; }
-.flyer-art { display: block; width: 100%; height: auto; }
-.flyer.dragon { width: 300px; }
-.dragon .flyer-art { filter: drop-shadow(0 0 6px rgba(255, 120, 40, 0.7)); }
-.dragon .c { fill: #4a120d; }
-.dragon .wing { fill: #6e1c14; }
-.dragon .eye { fill: #ffb347; }
-.owl .c, .owl .wing { fill: #c9a87a; }
-.owl .eye { fill: #1a1326; }
-.flyer .wing { transform-box: fill-box; transform-origin: 50% 100%; animation: flap 0.7s ease-in-out infinite alternate; }
-.flyer .wing.back { animation-delay: -0.35s; opacity: 0.8; }
-.owl .wing { transform-origin: 100% 60%; animation-duration: 0.45s; }
-.owl .wing.right { transform-origin: 0 60%; }
+.flyer.owl { width: 150px; top: 12%; animation-duration: 36s; animation-delay: -4s; }
+.flyer-art { display: block; width: 100%; height: auto; overflow: visible; }
+.flyer.dragon { width: 340px; }
+.dragon .flyer-art { filter: drop-shadow(0 0 6px rgba(255, 120, 40, 0.65)); }
+.dragon .eye { fill: #ffb347; filter: drop-shadow(0 0 3px #ff8a1e); }
+/* Wings pivot on the shoulder (set on each wing in the drawing). */
+.flyer .wing { transform-box: view-box; animation: flap 0.75s ease-in-out infinite alternate; }
+.flyer .wing.back { animation-delay: -0.37s; }
+.owl .wing { animation: owl-beat 0.42s ease-in-out infinite alternate; }
+@keyframes owl-beat { from { transform: rotate(-18deg); } to { transform: rotate(24deg); } }
 @keyframes fly { 0% { transform: translate(-30vw, 30px); opacity: 0; } 2% { opacity: var(--flyer-opacity, 0.85); } 30% { transform: translate(110vw, -40px); opacity: var(--flyer-opacity, 0.85); } 31%, 100% { transform: translate(110vw, -40px); opacity: 0; } }
 @keyframes flap { from { transform: scaleY(1); } to { transform: scaleY(-0.55); } }
 
