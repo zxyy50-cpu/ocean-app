@@ -1,5 +1,6 @@
 import { addDays } from "../core/dates.js";
 import { cleanText } from "../core/text.js";
+import { groupsOf } from "./industry-groups.js";
 import { AREA_PARENTS, areaFamily, canonicalArea, customerInAreas } from "./tags.js";
 
 // 開發計畫: which prospects to develop first, how far each zone has come, and
@@ -85,14 +86,28 @@ function isCurrentCustomer(model, customer, today) {
   return CUSTOMER_STATUSES.has(customer.relationStatus) || Boolean(last && last >= addDays(today, -365));
 }
 
+export const COSTCO_TAG = "Costco 供應";
+const BIG = new Set(["資本 1億以上", "資本 5千萬–1億"]);
+
+// A＝檢驗需求高且資本 5 千萬以上，或 2025 衰退客戶、確定供貨 Costco；
+// B＝需求高＋資本 1 千萬以上，或需求中＋資本 5 千萬以上；C＝其他（資本額不明也算 C）。
+export function priorityGrade(customer, micro = microTier(customer), capital = capitalTag(customer)) {
+  const segments = customer.segmentTags || [];
+  if (segments.includes("2025衰退客戶") || segments.includes(COSTCO_TAG)) return "A";
+  if (micro.level === "高" && BIG.has(capital)) return "A";
+  if ((micro.level === "高" && capital === "資本 1千萬–5千萬") || (micro.level === "中" && BIG.has(capital))) return "B";
+  return "C";
+}
+
 export function prospectScore(model, customer, today) {
   const micro = microTier(customer);
   const capital = capitalTag(customer);
   const back = winback(model, customer, today);
-  const reasons = [micro.label, capital || "資本額不明", back?.label].filter(Boolean);
+  const costco = (customer.segmentTags || []).includes(COSTCO_TAG);
+  const reasons = [micro.label, capital || "資本額不明", back?.label, costco ? "Costco 供應商" : null].filter(Boolean);
   return {
     score: micro.points + (capital ? CAPITAL_POINTS[capital] : 10) + (back?.points || 0),
-    micro, capital, small: capital === SMALL_TAG, reasons,
+    micro, capital, small: capital === SMALL_TAG, reasons, grade: priorityGrade(customer, micro, capital), groups: groupsOf(customer), costco,
   };
 }
 
@@ -107,7 +122,7 @@ export function countyOf(area) {
 }
 
 // Prospects worth developing, best first. Current customers, open cases and active 「不開發」 marks are left out.
-export function priorityList(model, { today, areas = [], area = "", tier = "", smallOnly = false, notContactedOnly = true } = {}) {
+export function priorityList(model, { today, areas = [], area = "", tier = "", grade = "", group = "", smallOnly = false, notContactedOnly = true } = {}) {
   const items = [];
   for (const customer of model.customers) {
     const hold = holdInfo(customer, today);
@@ -121,10 +136,13 @@ export function priorityList(model, { today, areas = [], area = "", tier = "", s
     if (notContactedOnly && contacted && !hold) continue;
     const scored = prospectScore(model, customer, today);
     if (tier && scored.micro.level !== tier) continue;
+    if (grade && scored.grade !== grade) continue;
+    if (group && !scored.groups.includes(group)) continue;
     if (smallOnly && !scored.small) continue;
     items.push({ customer, zone, contacted, holdExpired: Boolean(hold), ...scored });
   }
-  return items.sort((left, right) => right.score - left.score || left.customer.name.localeCompare(right.customer.name, "zh-Hant"));
+  // A before B before C; within a grade, the higher score first.
+  return items.sort((left, right) => left.grade.localeCompare(right.grade) || right.score - left.score || left.customer.name.localeCompare(right.customer.name, "zh-Hant"));
 }
 
 function emptyRow(area) {

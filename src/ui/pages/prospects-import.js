@@ -55,7 +55,7 @@ function prospectsCard(ctx) {
   });
   return h("section", { className: "card form-card", dataset: { section: "prospects" } }, [
     h("h2", { text: "匯入嘉雲高屏工廠與開發名單" }),
-    h("p", { className: "muted", text: "來源：經濟部「登記工廠名錄」（食品、飲料、藥品、化粧品工廠）＋你的開發名單＋財政部稅籍資料的資本額。有工業區的標工業區，其餘標縣市。匯入前會先列出新增、補資料、相近名稱，確認後才寫入。" }),
+    h("p", { className: "muted", text: "來源：經濟部「登記工廠名錄」（食品、飲料、藥品、化粧品工廠）＋產業園區管理局「區內事業名錄」＋你的開發名單＋財政部稅籍資料的資本額＋Costco 官網商品頁的製造商標示。每家會標產業群組、工業區（沒有的標縣市），Costco 有販售其商品的標「Costco 供應」；開發計畫依此算 A/B/C。匯入前會先列出新增、補資料、相近名稱，確認後才寫入。" }),
     h("div", { className: "button-row" }, [button]),
     region,
   ]);

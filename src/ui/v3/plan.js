@@ -1,14 +1,20 @@
 import { formatShortDate } from "../../core/dates.js";
 import { priorityList, zoneFunnel } from "../../data/devplan.js";
+import { GROUP_NAMES } from "../../data/industry-groups.js";
 import { badge, emptyState, h } from "../dom.js";
 import { registerPage } from "../app.js";
 import { openHoldDialog } from "../forms/hold.js";
 
 const PAGE = 40;
-const state = { view: "list", area: "", tier: "", smallOnly: false, notContactedOnly: true, mineOnly: true, limit: PAGE };
+const state = { view: "list", area: "", tier: "", grade: "", group: "", smallOnly: false, notContactedOnly: true, mineOnly: true, limit: PAGE };
 
 export function resetPlanState() {
-  Object.assign(state, { view: "list", area: "", tier: "", smallOnly: false, notContactedOnly: true, mineOnly: true, limit: PAGE });
+  Object.assign(state, { view: "list", area: "", tier: "", grade: "", group: "", smallOnly: false, notContactedOnly: true, mineOnly: true, limit: PAGE });
+}
+
+function filterSelect(label, key, options, ctx) {
+  return h("select", { "aria-label": label, dataset: { planFilter: key }, onChange: (event) => { state[key] = event.target.value; state.limit = PAGE; ctx.render(); } },
+    options.map(([value, text]) => h("option", { value, text, selected: value === state[key] })));
 }
 
 function chip(label, checked, data, onChange) {
@@ -26,6 +32,9 @@ function prospectCard(ctx, item, selected, refreshBar) {
       h("small", { className: "plan-reasons", text: item.reasons.join("・") }),
       h("small", { className: "muted", text: [item.zone, status].join("・") }),
       h("div", { className: "plan-badges" }, [
+        h("span", { className: `badge plan-grade grade-${item.grade}`, dataset: { planGrade: item.grade }, text: `${item.grade} 級` }),
+        ...item.groups.map((group) => badge(group)),
+        item.costco ? badge("Costco 供應", "accent") : null,
         item.small ? badge("規模小", "warn") : null,
         item.holdExpired ? badge("到期再看", "accent") : null,
       ]),
@@ -40,7 +49,7 @@ function prospectCard(ctx, item, selected, refreshBar) {
 
 function listView(ctx, areas) {
   const today = ctx.today();
-  const items = priorityList(ctx.model, { today, areas, area: state.area, tier: state.tier, smallOnly: state.smallOnly, notContactedOnly: state.notContactedOnly });
+  const items = priorityList(ctx.model, { today, areas, area: state.area, tier: state.tier, grade: state.grade, group: state.group, smallOnly: state.smallOnly, notContactedOnly: state.notContactedOnly });
   const shown = items.slice(0, state.limit);
   const selected = new Set();
   const bar = h("div", { className: "plan-bulk", dataset: { planBulk: "" } });
@@ -61,17 +70,20 @@ function listView(ctx, areas) {
   const areaSelect = h("select", { "aria-label": "區域", dataset: { planArea: "" }, onChange: (event) => { state.area = event.target.value; state.limit = PAGE; ctx.render(); } },
     [{ value: "", label: "全部區域" }, ...areaOptions].map((option) => h("option", { value: option.value, text: option.label, selected: option.value === state.area })));
   const tierSelect = h("select", { "aria-label": "微生物檢驗需求", dataset: { planTier: "" }, onChange: (event) => { state.tier = event.target.value; state.limit = PAGE; ctx.render(); } },
-    [["", "全部產業"], ["高", "檢驗需求高"], ["中", "檢驗需求中"], ["低", "檢驗需求低"], ["不明", "產業不明"]].map(([value, label]) => h("option", { value, text: label, selected: value === state.tier })));
+    [["", "全部檢驗需求"], ["高", "檢驗需求高"], ["中", "檢驗需求中"], ["低", "檢驗需求低"], ["不明", "產業不明"]].map(([value, label]) => h("option", { value, text: label, selected: value === state.tier })));
   const selectSmall = state.smallOnly && shown.length ? h("button", { type: "button", className: "small ghost", dataset: { planPickAll: "" }, text: `全選這頁 ${shown.length} 家`, onClick: () => { shown.forEach((item) => selected.add(item.customer.id)); document.querySelectorAll("[data-plan-pick]").forEach((node) => { node.checked = true; }); refreshBar(); } }) : null;
 
   return h("div", { className: "stack" }, [
     h("div", { className: "plan-filters" }, [
-      areaSelect, tierSelect,
+      filterSelect("優先級", "grade", [["", "全部優先級"], ["A", "A 級：先開發"], ["B", "B 級"], ["C", "C 級"]], ctx),
+      areaSelect,
+      filterSelect("產業群組", "group", [["", "全部產業"], ...GROUP_NAMES.map((name) => [name, name])], ctx),
+      tierSelect,
       chip("只看未接觸", state.notContactedOnly, { planNotContacted: "" }, (value) => { state.notContactedOnly = value; state.limit = PAGE; ctx.render(); }),
       chip("只看規模小", state.smallOnly, { planSmall: "" }, (value) => { state.smallOnly = value; state.limit = PAGE; ctx.render(); }),
       selectSmall,
     ]),
-    h("p", { className: "muted", dataset: { planCount: "" }, text: `${items.length} 家可開發，依分數排序。分數＝微生物檢驗需求（40）＋資本額（30）＋舊客戶／衰退客戶（最多 30）。` }),
+    h("p", { className: "muted", dataset: { planCount: "" }, text: `${items.length} 家可開發（A ${items.filter((item) => item.grade === "A").length}・B ${items.filter((item) => item.grade === "B").length}・C ${items.filter((item) => item.grade === "C").length}），A 級在前。A＝檢驗需求高且資本 5 千萬以上，或衰退客戶、Costco 供應商；B＝需求高＋資本 1 千萬以上，或需求中＋5 千萬以上。分數＝檢驗需求（40）＋資本額（30）＋舊客戶（最多 30）。` }),
     bar,
     shown.length ? h("ul", { className: "plan-list" }, shown.map((item) => prospectCard(ctx, item, selected, refreshBar))) : h("section", { className: "card" }, [emptyState("這個條件下沒有要開發的客戶", "換個區域，或取消「只看未接觸」。")]),
     items.length > state.limit ? h("button", { type: "button", className: "ghost", text: `顯示更多（還有 ${items.length - state.limit} 家）`, onClick: () => { state.limit += PAGE; ctx.render(); } }) : null,
