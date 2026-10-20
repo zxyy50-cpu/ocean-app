@@ -3,15 +3,27 @@ import { funnelConversion, lossReasonSummary } from "../../data/opportunities.js
 import { badge, emptyState, h, money, shortMoney } from "../dom.js";
 import { registerPage } from "../app.js";
 import { pageHeader } from "../shell.js";
+import { weeklySection } from "./kpi-weekly.js";
 
-const state = { period: "month", mineOnly: false };
+const state = { period: "month", mineOnly: false, view: "weekly" };
+
+function viewTabs(ctx) {
+  return h("nav", { className: "tabs", dataset: { kpiView: "" } }, [["weekly", "週會報告"], ["stats", "行動統計"]].map(([value, label]) => h("a", {
+    href: `#/kpi?view=${value}`, className: "button small ghost", "aria-current": state.view === value ? "page" : null, "aria-selected": String(state.view === value), dataset: { kpiViewTab: value }, text: label,
+  })));
+}
 
 function bar(value, max, label) {
   const percent = max ? Math.max(2, Math.round((value / max) * 100)) : 0;
   return h("div", { className: "meter", role: "img", "aria-label": label }, [h("i", { style: { width: `${percent}%` } })]);
 }
 
-export function renderKpi(ctx) {
+export function renderKpi(ctx, route) {
+  const asked = route?.query?.get?.("view");
+  if (asked === "weekly" || asked === "stats") state.view = asked;
+  if (state.view === "weekly") {
+    return h("div", { className: "stack" }, [pageHeader("KPI", "每週更新三項業績，週會直接用這頁報告。"), viewTabs(ctx), weeklySection(ctx)]);
+  }
   const today = ctx.today();
   const data = buildKpi(ctx.model, { period: state.period, today, myAreas: ctx.settings.myAreas, mineOnly: state.mineOnly });
   const targets = overviewTargets(ctx.reference?.kpis || []);
@@ -62,6 +74,7 @@ export function renderKpi(ctx) {
 
   return h("div", { className: "stack" }, [
     pageHeader("KPI", "完整目標與行動統計；今日頁只放摘要。"),
+    viewTabs(ctx),
     h("div", { className: "button-row" }, [periodTabs, mine]),
     targetSection,
     activitySection,

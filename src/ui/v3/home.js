@@ -1,6 +1,7 @@
 import { formatShortDate, weekdayLabel } from "../../core/dates.js";
 import { requestId } from "../../core/ids.js";
 import { buildActions } from "../../data/actions.js";
+import { meetingReminders } from "../../data/kpi-weekly.js";
 import { customerIdentity } from "../../data/model.js";
 import { completeReminder, snoozeReminder } from "../../data/reminders.js";
 import { badge, emptyState, h, toast } from "../dom.js";
@@ -80,7 +81,12 @@ export function renderHome(ctx) {
       data.signalCount > data.signals.length ? h("a", { className: "more-link", href: "#/orders?view=signals", text: `還有 ${data.signalCount - data.signals.length} 個新購提醒 →` }) : null,
     ]));
   }
+  const meeting = meetingReminders(ctx.model, ctx.model.all, today);
   const lines = [
+    meeting ? h("a", { className: "summary-line warn", href: "#/kpi?view=weekly", dataset: { kpiReminder: "" } }, [
+      h("span", { text: `${meeting.daysLeft ? "明天" : "今天"}週會：${[meeting.missingWeek ? "本週 KPI 金額還沒填" : "", meeting.stale.length ? `主管關注 ${meeting.stale.length} 案還沒更新（${meeting.stale.slice(0, 2).map((row) => row.opportunity.name).join("、")}${meeting.stale.length > 2 ? "…" : ""}）` : ""].filter(Boolean).join("；")}` }),
+      h("span", { text: "去更新 →" }),
+    ]) : null,
     data.overdue.count ? h("a", { className: "summary-line warn", href: "#/triage", dataset: { overdueLine: "" } }, [h("span", { text: `逾期 ${data.overdue.count} 件` }), h("span", { text: "一次整理 →" })]) : null,
     data.redCases ? h("a", { className: "summary-line", href: "#/cases", dataset: { redCaseLine: "" } }, [h("span", { text: `${data.redCases} 個提案／議價的案子有紅燈` }), h("span", { text: "看案子 →" })]) : null,
   ].filter(Boolean);
