@@ -11,23 +11,23 @@ const shade = (id, stops) => `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2
 // Each drawing faces right; `u` keeps gradient ids unique per copy.
 const SEA = {
   // Bottlenose dolphin: short beak, rounded melon, curved (falcate) dorsal fin, grey back, pale belly.
-  dolphin: { box: "0 0 300 110", art: (u) => `<defs>${shade(`d${u}`, [[0, "#2c566b"], [0.5, "#5b889e"], [0.72, "#c9dfe8"], [1, "#eef6f9"]])}</defs>
-    <path fill="#2c566b" d="M146 46 C150 30 150 16 140 6 C160 12 180 28 192 40 Z"/>
-    <path fill="url(#d${u})" d="M296 62 C290 58 280 56 270 55 C262 44 248 38 230 38 C200 38 170 40 150 44 C120 50 90 58 60 64 C45 67 32 68 22 68 C14 60 8 52 2 48 C8 58 12 66 16 72 C10 80 6 88 2 94 C14 86 22 80 30 76 C60 82 100 88 140 88 C190 88 240 80 270 70 C280 67 290 65 296 62 Z"/>
-    <path fill="#3d6a80" d="M222 78 C214 90 204 100 192 104 C204 92 208 84 210 78 Z"/>
-    <path fill="none" stroke="#1d3b4a" stroke-width="1.6" stroke-linecap="round" d="M296 62 C286 64 274 64 264 62"/>
-    <circle cx="252" cy="57" r="2.4" fill="#0b1418"/>` },
+  dolphin: { box: "0 0 300 115", art: (u) => `<defs>${shade(`d${u}`, [[0, "#2c566b"], [0.5, "#5b889e"], [0.72, "#c9dfe8"], [1, "#eef6f9"]])}</defs>
+    <path fill="#2c566b" d="M152 41 C155 33 155 26 149 19 C163 22 175 29 184 36 Z"/>
+    <path fill="url(#d${u})" d="M296 66 C290 62 280 60 270 59 C262 46 248 36 228 34 C198 33 168 36 148 40 C118 46 88 56 60 64 C45 67 32 69 22 70 C14 62 8 54 2 50 C8 60 12 68 16 74 C10 82 6 90 2 96 C14 88 22 82 30 78 C60 88 100 100 145 102 C195 102 240 92 270 76 C280 72 290 69 296 66 Z"/>
+    <path fill="#3d6a80" d="M222 86 C214 98 204 106 192 110 C204 98 208 92 210 86 Z"/>
+    <path fill="none" stroke="#1d3b4a" stroke-width="1.6" stroke-linecap="round" d="M296 66 C286 68 274 68 264 66"/>
+    <circle cx="250" cy="58" r="2.4" fill="#0b1418"/>` },
   // Humpback: flat knobbly head, very long white flippers, small hump-like dorsal fin, throat grooves.
   humpback: { box: "0 0 420 165", art: (u) => `<defs>${shade(`h${u}`, [[0, "#1f313b"], [0.55, "#33505e"], [0.8, "#a9bcc5"], [1, "#d9e4e8"]])}</defs>
-    <path fill="url(#h${u})" d="M412 70 C400 60 380 56 360 56 C320 56 280 56 240 58 C200 60 170 62 150 64 C140 56 132 52 126 54 C124 60 120 64 112 66 C80 72 50 76 30 78 C22 66 12 58 2 54 C8 66 12 74 18 82 C10 90 6 100 2 108 C16 98 26 90 34 86 C80 102 140 118 205 122 C285 124 352 108 392 90 C403 85 410 78 412 70 Z"/>
-    <g fill="#16252d"><circle cx="392" cy="61" r="2.2"/><circle cx="380" cy="58" r="2.2"/><circle cx="368" cy="57" r="2"/><circle cx="356" cy="57" r="1.8"/><circle cx="386" cy="66" r="1.6"/></g>
+    <path fill="url(#h${u})" d="M412 70 C400 56 380 50 360 48 C320 46 280 44 240 46 C200 48 170 52 150 56 C142 50 136 48 130 50 C127 55 122 58 114 61 C80 68 50 74 30 78 C22 66 12 58 2 54 C8 66 12 74 18 82 C10 90 6 100 2 108 C16 98 26 90 34 86 C80 104 140 122 205 127 C285 130 352 112 392 92 C403 86 410 78 412 70 Z"/>
+    <g fill="#16252d"><circle cx="394" cy="57" r="2.2"/><circle cx="382" cy="52" r="2.2"/><circle cx="370" cy="50" r="2"/><circle cx="358" cy="49" r="1.8"/><circle cx="388" cy="62" r="1.6"/></g>
     <path fill="none" stroke="#7c919b" stroke-width="1.2" d="M398 86 C360 104 320 114 290 118 M394 90 C356 107 318 117 292 120 M388 94 C352 110 318 119 296 121"/>
     <path fill="#e9f0f3" stroke="#2a3e48" stroke-width="1.2" d="M332 102 C312 126 282 146 238 158 C250 152 260 145 268 137 C284 123 300 110 314 102 Z"/>
     <path fill="none" stroke="#14232b" stroke-width="1.6" stroke-linecap="round" d="M412 70 C392 76 372 78 352 78"/>
     <circle cx="352" cy="72" r="2.4" fill="#0b1418"/>` },
   // Blue whale: the longest and most slender, broad flat head, a tiny dorsal fin far back, mottled blue-grey.
   blue: { box: "0 0 520 110", art: (u) => `<defs>${shade(`b${u}`, [[0, "#42667b"], [0.6, "#6b90a4"], [1, "#a8c3d0"]])}</defs>
-    <path fill="url(#b${u})" d="M514 52 C506 44 490 40 470 40 C420 40 360 42 300 44 C240 46 180 48 140 50 C132 46 128 42 124 44 C124 48 122 51 118 52 C90 55 60 58 36 60 C26 50 14 44 2 40 C8 52 12 60 16 66 C10 74 6 82 2 90 C14 82 26 74 36 70 C90 76 160 80 240 80 C340 80 430 74 480 66 C498 63 510 58 514 52 Z"/>
+    <path fill="url(#b${u})" d="M514 52 C506 42 490 36 470 35 C420 33 360 35 300 37 C240 40 180 43 140 46 C134 43 130 41 127 42 C126 45 124 47 120 48 C90 53 60 57 36 60 C26 50 14 44 2 40 C8 52 12 60 16 66 C10 74 6 82 2 90 C14 82 26 74 36 70 C90 80 160 88 240 89 C340 89 430 80 480 68 C498 64 510 58 514 52 Z"/>
     <g fill="#8db0c1" opacity="0.55"><ellipse cx="380" cy="52" rx="7" ry="3"/><ellipse cx="320" cy="56" rx="9" ry="3"/><ellipse cx="260" cy="52" rx="6" ry="2.5"/><ellipse cx="210" cy="58" rx="8" ry="3"/><ellipse cx="160" cy="55" rx="5" ry="2"/><ellipse cx="420" cy="48" rx="5" ry="2"/></g>
     <path fill="none" stroke="#557a8e" stroke-width="1" d="M500 62 C460 70 420 74 380 76 M494 65 C456 72 418 76 382 78"/>
     <path fill="#557a8e" d="M420 72 C412 82 398 88 384 90 C394 84 400 78 404 72 Z"/>
@@ -35,19 +35,19 @@ const SEA = {
     <circle cx="452" cy="55" r="2.2" fill="#0b1418"/>` },
   // Orca: tall dorsal fin, black body, white eye patch, white chin and belly, grey saddle behind the fin.
   orca: { box: "0 0 300 140", art: () => `
-    <path fill="#11181d" d="M296 80 C290 70 276 64 258 62 C230 60 204 60 182 62 L165 2 L140 66 C110 70 80 74 50 78 C40 79 32 80 24 80 C16 70 8 64 2 60 C6 72 10 80 14 86 C8 94 4 102 2 110 C12 102 22 96 30 92 C70 100 120 108 170 108 C220 108 262 100 284 92 C292 88 296 84 296 80 Z"/>
-    <path fill="#7f8c94" d="M184 64 C164 68 144 70 128 70 C146 75 168 74 186 68 Z"/>
-    <path fill="#f2f6f8" d="M262 69 C252 62 236 62 228 67 C238 72 252 74 262 69 Z"/>
-    <path fill="#f2f6f8" d="M294 84 C280 96 250 104 210 104 C190 104 175 102 166 98 C186 96 220 94 250 90 C270 88 284 86 294 84 Z"/>
-    <path fill="#f2f6f8" d="M150 100 C135 92 115 90 100 96 C115 100 132 104 150 104 Z"/>
-    <path fill="#0b1013" d="M242 100 C238 116 228 126 212 130 C216 118 220 108 224 100 Z"/>
-    <circle cx="268" cy="74" r="2.2" fill="#000"/>` },
+    <path fill="#11181d" d="M296 82 C290 70 276 62 258 58 C230 54 204 53 184 55 C181 45 179 36 176 26 C168 36 158 48 148 60 C110 66 80 72 50 78 C40 80 32 81 24 81 C16 71 8 65 2 61 C6 73 10 81 14 87 C8 95 4 103 2 111 C12 103 22 97 30 93 C70 106 120 116 170 116 C220 116 262 106 284 96 C292 92 296 87 296 82 Z"/>
+    <path fill="#7f8c94" d="M186 57 C166 62 146 64 130 65 C148 70 170 68 188 61 Z"/>
+    <path fill="#f2f6f8" d="M262 66 C252 59 236 59 228 64 C238 69 252 71 262 66 Z"/>
+    <path fill="#f2f6f8" d="M294 86 C280 100 250 110 210 111 C190 111 175 109 166 105 C186 103 220 100 250 95 C270 92 284 89 294 86 Z"/>
+    <path fill="#f2f6f8" d="M150 106 C135 98 115 96 100 102 C115 107 132 111 150 111 Z"/>
+    <path fill="#0b1013" d="M242 106 C238 122 228 132 212 136 C216 124 220 114 224 106 Z"/>
+    <circle cx="268" cy="72" r="2.2" fill="#000"/>` },
   // Sperm whale: a huge square head (a third of the body), narrow underslung jaw, wrinkled grey skin, knuckled back.
   sperm: { box: "0 0 440 130", art: (u) => `<defs>${shade(`s${u}`, [[0, "#3a4045"], [1, "#5f686d"]])}</defs>
-    <path fill="url(#s${u})" d="M432 38 C438 42 440 54 438 68 C436 82 430 90 420 92 C380 94 340 96 300 98 C240 102 180 102 130 96 C100 92 70 86 46 82 C34 90 20 102 2 114 C14 98 20 88 22 80 C14 72 8 62 2 48 C18 58 32 68 46 74 C80 68 110 62 140 60 C150 54 160 52 168 56 C180 52 200 48 230 44 C280 38 340 34 400 34 C416 34 426 35 432 38 Z"/>
+    <path fill="url(#s${u})" d="M432 38 C438 42 440 54 438 68 C436 82 430 92 420 96 C380 102 340 108 300 111 C240 115 180 112 130 104 C100 98 70 90 46 84 C34 90 20 102 2 114 C14 98 20 88 22 80 C14 72 8 62 2 48 C18 58 32 68 46 74 C80 68 110 62 140 60 C150 54 160 52 168 56 C180 52 200 48 230 44 C280 38 340 34 400 34 C416 34 426 35 432 38 Z"/>
     <g fill="none" stroke="#2a2f33" stroke-width="1.2" stroke-linecap="round" opacity="0.7"><path d="M250 60 c6 4 12 4 18 0"/><path d="M220 70 c6 4 12 4 18 0"/><path d="M190 64 c6 4 12 4 18 0"/><path d="M280 76 c6 4 12 4 18 0"/><path d="M160 74 c6 4 12 4 18 0"/><path d="M196 52 l4 -4 l4 4"/><path d="M182 54 l4 -4 l4 4"/></g>
-    <path fill="#dfe5e8" d="M420 92 C390 98 340 102 300 102 C330 104 380 102 418 96 Z"/>
-    <path fill="#454c51" d="M330 96 C326 106 318 112 306 114 C312 106 316 100 318 96 Z"/>
+    <path fill="#dfe5e8" d="M420 96 C390 104 340 110 300 112 C330 115 380 111 418 100 Z"/>
+    <path fill="#454c51" d="M330 106 C326 116 318 122 306 124 C312 116 316 110 318 106 Z"/>
     <circle cx="330" cy="80" r="2.2" fill="#0b1418"/>` },
   // Beluga: all white, a round bulging forehead, a short beak, a neck crease and no dorsal fin.
   beluga: { box: "0 0 280 110", art: (u) => `<defs>${shade(`w${u}`, [[0, "#fbfdfe"], [0.6, "#e6eff3"], [1, "#c3d5dd"]])}</defs>
