@@ -140,6 +140,25 @@
   .home, .capture, .prep, .case { max-width: 760px; }
 }
 
+/* 商機整理 & 結案 */
+.case-close { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; margin-top: 4px; border-radius: var(--radius-sm); background: var(--surface-2, var(--bg)); }
+.case-close strong { margin-right: 4px; }
+.ok-button { background: var(--ok); color: #fff; border-color: transparent; }
+.danger-soft-button { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
+.tidy { max-width: 760px; }
+.tidy-head h1 { margin: 0; font-size: 1.3rem; }
+.tidy-card h2 { margin: 2px 0; }
+.tidy-notes { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2, var(--bg)); font-size: 0.92rem; }
+.tidy-notes p { margin: 2px 0; overflow-wrap: anywhere; }
+.tidy-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; align-items: start; }
+.tidy-facts > * { display: flex; flex-direction: column; gap: 4px; }
+.tidy-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tidy-actions button { min-height: 48px; font-size: 1rem; }
+.tidy-actions [data-tidy-action="archive"], .tidy-actions [data-tidy-action="skip"] { min-height: 40px; font-size: 0.9rem; }
+.tidy-actions [data-tidy-action="archive"] { grid-column: 1 / 3; }
+.tidy-panel { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 2px solid var(--accent); border-radius: var(--radius-sm); }
+.tidy-panel input[type="date"], .tidy-panel input[type="number"] { width: auto; max-width: 200px; }
+
 /* KPI 週報 */
 .kpi-weekly .section-head { flex-wrap: wrap; gap: 8px; }
 .kpi-weekly .tabs { flex-wrap: wrap; }

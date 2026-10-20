@@ -6,6 +6,7 @@ import { opportunityCategory, opportunityTitle, productOptions } from "../../dat
 import { customerInAreas } from "../../data/tags.js";
 import { isOpportunityOverdue, opportunityAttention } from "../../data/today.js";
 import { OPEN_OPPORTUNITY_STAGES } from "../../data/schema.js";
+import { tidyQueue } from "../../data/tidy.js";
 import { badge, emptyState, field, formToObject, h, input, money, select, showErrors, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { changeStage, lostDialog, wonDialog } from "../pages/opportunity.js";
@@ -55,8 +56,12 @@ export function renderCases(ctx) {
     return openByDefault ? h("section", { className: "card", dataset: { caseStage: stage } }, [h("h2", { text: title }), body]) : h("details", { className: "card", dataset: { caseStage: stage } }, [h("summary", { text: title }), body, list.length > 40 ? h("a", { className: "small", href: "#/opportunities", text: `其餘 ${list.length - 40} 件到商機清單看 →` }) : null]);
   };
 
+  const toTidy = tidyQueue(ctx.model, ctx.model.all, { today, areas: state.mineOnly ? ctx.settings.myAreas || [] : [] }).queue.length;
   return h("div", { className: "stack" }, [
-    h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "案子" }), h("p", { text: `進行中 ${pool.length} 件・${money(total)}` })]), h("div", { className: "page-actions" }, [h("a", { className: "button ghost", href: "#/opportunities", text: "完整清單與批次整理" })])]),
+    h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "案子" }), h("p", { text: `進行中 ${pool.length} 件・${money(total)}` })]), h("div", { className: "page-actions" }, [
+      toTidy ? h("a", { className: "button primary", href: "#/tidy", dataset: { tidyEntry: "" }, text: `整理商機（${toTidy} 件待整理）` }) : null,
+      h("a", { className: "button ghost", href: "#/opportunities", text: "完整清單" }),
+    ])]),
     h("div", { className: "search-box" }, [search]),
     mine,
     flagged.length ? h("section", { className: "card", dataset: { caseAttention: "" } }, [
@@ -85,19 +90,25 @@ export function renderCase(ctx, route) {
   // selling, the money, the next step, and a free-text update stamped with today's date.
   const contacts = ctx.model.contactsByCustomer.get(opportunity.customerId) || [];
   const listId = `products-${opportunity.id}`;
+  // Everyday: what happened, what's next, when to remind. The rest only when it changes.
   const nextForm = h("form", { className: "form-grid", novalidate: true, dataset: { form: "case-next" } }, [
     h("p", { className: "field-error span-2", role: "alert", hidden: true, dataset: { formErrors: "" } }),
-    field("推的產品（品牌＋名稱）", input("product", opportunity.product && opportunity.product !== opportunity.name ? opportunity.product : "", { list: listId, placeholder: "例如：bioMérieux VIDAS" }), { className: "span-2" }),
-    h("datalist", { id: listId }, productOptions(ctx.toolkit || []).map((value) => h("option", { value }))),
-    h("div", { className: "stack", style: { gap: "4px" } }, [
-      field("對口聯絡人", select("contactId", [{ value: "", label: "（未指定）" }, ...contacts.map((contact) => ({ value: contact.id, label: [contact.name, contact.title].filter(Boolean).join("・") }))], opportunity.contactId || "")),
-      h("button", { type: "button", className: "small ghost", dataset: { caseAddContact: "" }, text: "＋ 新增聯絡人", onClick: () => openContactEditor(ctx, opportunity.customerId) }),
-    ]),
-    field("預估金額（未稅）", input("amount", opportunity.amount ?? "", { type: "number", min: 0, inputmode: "numeric" })),
-    field("下一步", input("nextAction", opportunity.nextAction, { placeholder: "對誰、做什麼" }), { className: "span-2" }),
-    field("提醒日期", input("reminderDate", opportunity.reminderDate || "", { type: "date", min: today })),
-    field("預計結案日", input("expectedCloseDate", opportunity.expectedCloseDate || "", { type: "date" })),
     field("最新狀況（自己寫）", h("textarea", { name: "update", rows: 3, placeholder: "例如：廠長同意先試用一條線，預算要等 11 月確認" }), { className: "span-2", hint: "會加上今天日期，放在備註最上面" }),
+    field("下一步", input("nextAction", opportunity.nextAction, { placeholder: "對誰、做什麼" })),
+    field("提醒日期", input("reminderDate", opportunity.reminderDate || "", { type: "date", min: today })),
+    h("details", { className: "span-2", dataset: { caseMoreFields: "" } }, [
+      h("summary", { text: "更多欄位（產品、聯絡人、金額、預計結案日）" }),
+      h("div", { className: "form-grid" }, [
+        field("推的產品（品牌＋名稱）", input("product", opportunity.product && opportunity.product !== opportunity.name ? opportunity.product : "", { list: listId, placeholder: "例如：bioMérieux VIDAS" }), { className: "span-2" }),
+        h("datalist", { id: listId }, productOptions(ctx.toolkit || []).map((value) => h("option", { value }))),
+        h("div", { className: "stack", style: { gap: "4px" } }, [
+          field("對口聯絡人", select("contactId", [{ value: "", label: "（未指定）" }, ...contacts.map((contact) => ({ value: contact.id, label: [contact.name, contact.title].filter(Boolean).join("・") }))], opportunity.contactId || "")),
+          h("button", { type: "button", className: "small ghost", dataset: { caseAddContact: "" }, text: "＋ 新增聯絡人", onClick: () => openContactEditor(ctx, opportunity.customerId) }),
+        ]),
+        field("預估金額（未稅）", input("amount", opportunity.amount ?? "", { type: "number", min: 0, inputmode: "numeric" })),
+        field("預計結案日", input("expectedCloseDate", opportunity.expectedCloseDate || "", { type: "date" })),
+      ]),
+    ]),
     opportunity.notes ? h("details", { className: "span-2" }, [h("summary", { text: "之前的狀況與備註" }), h("p", { className: "note", text: opportunity.notes })]) : null,
     h("div", { className: "form-actions span-2" }, [h("button", { type: "submit", className: "small primary", text: "更新案子" })]),
   ]);
@@ -124,9 +135,12 @@ export function renderCase(ctx, route) {
       h("div", { className: "button-row" }, [
         h("a", { className: "button primary", href: `#/capture?customer=${encodeURIComponent(opportunity.customerId)}&opportunity=${encodeURIComponent(opportunity.id)}`, text: "＋ 記錄" }),
         open ? h("a", { className: "button ghost", href: `#/prep/${encodeURIComponent(opportunity.customerId)}?opportunity=${encodeURIComponent(opportunity.id)}`, text: "拜訪前準備" }) : null,
-        open ? h("button", { type: "button", className: "ghost", dataset: { markWon: "" }, text: "成交", onClick: () => wonDialog(ctx, opportunity) }) : null,
-        open ? h("button", { type: "button", className: "ghost", dataset: { markLost: "" }, text: "未成交", onClick: () => lostDialog(ctx, opportunity) }) : null,
       ]),
+      open ? h("div", { className: "case-close", dataset: { caseClose: "" } }, [
+        h("strong", { text: "結案" }),
+        h("button", { type: "button", className: "ok-button", dataset: { markWon: "" }, text: "✓ 成交", onClick: () => wonDialog(ctx, opportunity) }),
+        h("button", { type: "button", className: "danger-soft-button", dataset: { markLost: "" }, text: "✕ 未成交", onClick: () => lostDialog(ctx, opportunity) }),
+      ]) : null,
     ]),
     flags.length ? h("section", { className: "card", dataset: { caseFlags: "" } }, [h("h2", { text: "卡在哪" }), h("ul", {}, flags.map((flag) => h("li", {}, [h("strong", { text: flag.text }), h("div", { className: "muted", text: flag.hint })])))]) : null,
     h("section", { className: "card", dataset: { casePeople: "" } }, [

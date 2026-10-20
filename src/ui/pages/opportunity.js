@@ -5,7 +5,7 @@ import { archiveOpportunity, createOpportunity, isOpen, markLost, markWon, prepe
 import { LOST_REASONS, OPEN_OPPORTUNITY_STAGES } from "../../data/schema.js";
 import { opportunityTitle } from "../../data/products.js";
 import { opportunityAttention } from "../../data/today.js";
-import { badge, emptyState, field, formToObject, h, input, money, openDialog, select, showErrors, toast } from "../dom.js";
+import { badge, chipGroup, emptyState, field, formToObject, h, input, money, openDialog, select, showErrors, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { caseAnalysisSection } from "../forms/case-analysis.js";
 import { negotiationSection } from "../forms/negotiation.js";
@@ -69,20 +69,27 @@ export function lostDialog(ctx, opportunity) {
   openDialog((close) => {
     const form = h("form", { className: "sheet-body", dataset: { form: "lost" } }, [
       h("h2", { text: `「${opportunityTitle(opportunity, 30)}」未成交` }),
-      field("主要原因", select("lostReason", LOST_REASONS, LOST_REASONS[0])),
-      field("實際狀況（自己寫）", h("textarea", { name: "note", rows: 3, placeholder: "例如：總公司統一採購，改用原廠合約價" }), { hint: "會加上今天日期，放在備註最上面" }),
-      reviewFields(opportunity.review),
+      h("div", { className: "field", dataset: { field: "lostReason" } }, [h("span", { className: "field-label", text: "主要原因" }), chipGroup("lostReason", LOST_REASONS, LOST_REASONS[0])]),
+      moreToSay([
+        field("實際狀況（自己寫）", h("textarea", { name: "note", rows: 3, placeholder: "例如：總公司統一採購，改用原廠合約價" }), { hint: "會加上今天日期，放在備註最上面" }),
+        reviewFields(opportunity.review),
+      ]),
       h("p", { className: "muted", text: "未成交的商機會保留在歷史紀錄，之後可以重新開啟。" }),
       h("div", { className: "sheet-actions" }, [h("button", { type: "button", className: "ghost", text: "取消", onClick: close }), h("button", { type: "submit", className: "danger", text: "標記未成交" })]),
     ]);
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const result = await markLost(ctx.db, opportunity.id, form.elements.lostReason.value, requestId("opportunity-lost"), { review: collectReview(form), notes: prependNote(opportunity.notes, form.elements.note.value, ctx.today()) });
+      const result = await markLost(ctx.db, opportunity.id, formToObject(form).lostReason || LOST_REASONS[0], requestId("opportunity-lost"), { review: collectReview(form), notes: prependNote(opportunity.notes, form.elements.note.value, ctx.today()) });
       close();
       toast(result.ok ? "已標記未成交" : "更新失敗", { tone: result.ok ? "ok" : "error" });
     });
     return form;
   }, { label: "標記未成交" });
+}
+
+// Notes and the three review questions stay folded away: closing a case only needs the essentials.
+function moreToSay(children) {
+  return h("details", { dataset: { moreToSay: "" } }, [h("summary", { text: "想多寫一點（備註、檢討三問，選填）" }), h("div", { className: "stack" }, children)]);
 }
 
 function reviewFields(existing = {}) {
@@ -101,8 +108,10 @@ export function wonDialog(ctx, opportunity) {
     const form = h("form", { className: "sheet-body", dataset: { form: "won" } }, [
       h("h2", { text: `恭喜！「${opportunityTitle(opportunity, 30)}」成交` }),
       field("成交金額（未稅）", input("amount", opportunity.amount ?? "", { type: "number", min: 0, required: true })),
-      field("成交狀況（自己寫）", h("textarea", { name: "note", rows: 2, placeholder: "例如：先買一台，明年再加第二台" })),
-      reviewFields(opportunity.review),
+      moreToSay([
+        field("成交狀況（自己寫）", h("textarea", { name: "note", rows: 2, placeholder: "例如：先買一台，明年再加第二台" })),
+        reviewFields(opportunity.review),
+      ]),
       h("p", { className: "field-error", hidden: true, dataset: { formErrors: "" } }),
       h("div", { className: "sheet-actions" }, [h("button", { type: "button", className: "ghost", text: "取消", onClick: close }), h("button", { type: "submit", className: "primary", text: "標記成交" })]),
     ]);
