@@ -23,7 +23,7 @@ export const MORE_ITEMS = Object.freeze([
 export const PAGE_GROUPS = Object.freeze([
   { name: "line-order", tabs: [["line-order", "LINE 訂單"], ["orders", "全部訂單與新購提醒"]] },
   { name: "cases", tabs: [["cases", "要注意的案子"], ["tidy", "商機整理"], ["opportunities", "完整清單"]] },
-  { name: "plan", tabs: [["plan", "開發計畫"], ["customers", "客戶探索"]] },
+  { name: "plan", tabs: [["plan", "開發計畫"], ["costcheck", "成本健檢"], ["customers", "客戶探索"]] },
   { name: "dedupe", tabs: [["dedupe", "整理同名客戶"], ["archive", "封存與復原"], ["data", "資料工具"]] },
   { name: "settings", tabs: [["settings", "設定與外觀"], ["sync", "同步中心"], ["classic", "舊版畫面"]] },
 ]);

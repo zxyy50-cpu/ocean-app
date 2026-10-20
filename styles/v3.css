@@ -145,6 +145,25 @@
   .home, .capture, .prep, .case { max-width: 760px; }
 }
 
+/* 檢驗成本健檢 */
+.cost-check { max-width: 980px; }
+.cc-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cc-field input, .cc-field select { width: 100%; }
+.cc-line-head { display: grid; grid-template-columns: 2fr 1fr auto; gap: 10px; align-items: end; }
+.cc-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cc-side { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--radius-sm); background: var(--surface-2, var(--bg)); min-width: 0; }
+.cc-side.ours { background: var(--accent-soft); }
+.cc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.cc-line-result { margin: 0; font-weight: 600; }
+.cc-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.cc-totals > div { display: flex; flex-direction: column; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-2, var(--bg)); }
+.cc-totals strong { font-size: 1.25rem; }
+.cc-totals .good { background: var(--ok-soft); color: var(--ok); }
+.cc-totals .bad { background: var(--warn-soft); color: var(--warn); }
+.cc-chart svg { width: 100%; height: auto; display: block; }
+.cc-price.is-hidden { opacity: 0.55; }
+@media (max-width: 700px) { .cc-columns, .cc-line-head { grid-template-columns: 1fr; } }
+
 /* 商機整理 & 結案 */
 .case-close { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; margin-top: 4px; border-radius: var(--radius-sm); background: var(--surface-2, var(--bg)); }
 .case-close strong { margin-right: 4px; }

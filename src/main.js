@@ -29,6 +29,7 @@ import "./ui/v3/capture.js";
 import "./ui/v3/prep.js";
 import "./ui/v3/cases.js";
 import "./ui/v3/tidy.js";
+import "./ui/v3/cost-check.js";
 import "./ui/v3/triage.js";
 import "./ui/v3/appearance.js";
 import "./ui/v3/plan.js";
