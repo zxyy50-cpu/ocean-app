@@ -1,4 +1,6 @@
 import { globalSearch, snippet } from "../../data/search.js";
+import { loadReference } from "../../data/line-orders.js";
+import { quoteCandidates } from "../../data/quote.js";
 import { opportunityTitle } from "../../data/products.js";
 import { openMergeGroupDialog } from "../forms/merge-group.js";
 import { customerIdentity } from "../../data/model.js";
@@ -6,9 +8,21 @@ import { badge, emptyState, h, money } from "../dom.js";
 import { registerPage } from "../app.js";
 
 const state = { query: "" };
+let catalog = null;
 
 export function resetSearchState() {
   state.query = "";
+  catalog = null;
+}
+
+// 產品 (商品清單): each row opens 產品報價 with that product already added.
+function productGroup(query) {
+  if (!catalog?.productList?.length) return null;
+  const found = quoteCandidates(catalog, query, 6);
+  return group("產品（報價）", found.length, found.length, found.map((product) => h("li", {}, [h("a", { href: `#/line-order?mode=quote&code=${encodeURIComponent(product.code)}`, dataset: { searchProduct: product.code } }, [
+    h("strong", {}, highlight(`${product.code}｜${product.name}`, query)),
+    h("small", { className: "muted", text: [product.nameZh, product.spec, product.listPrice !== null ? `定價 ${money(product.listPrice)}` : "定價未填"].filter(Boolean).join("・") }),
+  ])])));
 }
 
 // Wraps every occurrence of the query in <mark>, without touching HTML.
@@ -78,6 +92,7 @@ export function renderSearch(ctx, route) {
           h("small", { className: "muted", text: [ctx.model.customerName(opportunity.customerId), opportunity.stage, opportunity.amount ? money(opportunity.amount) : null].filter(Boolean).join("・") }),
         ])]);
       })),
+      productGroup(query),
       group("買過的產品", found.totals.items, found.items.length, found.items.map(({ item, order }) => h("li", {}, [h("a", { href: `#/customer/${encodeURIComponent(order.customerId)}?tab=orders` }, [
         h("strong", {}, highlight(item.productName || item.productCode, query)),
         h("small", { className: "muted", text: [ctx.model.customerName(order.customerId), order.orderDate, item.productCode].filter(Boolean).join("・") }),
@@ -85,7 +100,13 @@ export function renderSearch(ctx, route) {
     ].filter(Boolean);
     results.replaceChildren(...(sections.length ? sections : [emptyState(`找不到「${query}」`, "換個關鍵字試試：公司簡稱、聯絡人、電話後四碼、產品名稱。")]));
   };
-  const input = h("input", { type: "search", value: state.query, placeholder: "公司、人名、電話、產品或拜訪內容", "aria-label": "搜尋全部資料", dataset: { globalSearch: "" }, enterkeyhint: "search", autocomplete: "off" });
+  // 商品清單 lives in the order reference; once it is loaded, products show up too.
+  loadReference(ctx.db).then((loaded) => {
+    if (loaded.reference === catalog) return;
+    catalog = loaded.reference;
+    if (state.query.trim()) draw();
+  }).catch(() => {});
+  const input = h("input", { type: "search", value: state.query, placeholder: "公司、人名、電話、料號、產品或拜訪內容", "aria-label": "搜尋全部資料", dataset: { globalSearch: "" }, enterkeyhint: "search", autocomplete: "off" });
   let timer = null;
   input.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => { state.query = input.value; draw(); }, 150); });
   draw();

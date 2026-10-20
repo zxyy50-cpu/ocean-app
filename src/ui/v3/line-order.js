@@ -10,6 +10,7 @@ import {
   orderTaxByCustomer, rememberTax, savedOrderRows, savedSalutations, setLineOrderStatus, sheetState, writeOrderToSheet,
 } from "../../data/line-orders.js";
 import { badge, confirmDialog, emptyState, h, money, toast } from "../dom.js";
+import { drawQuote, queueQuoteCode, resetQuoteState } from "./quote-panel.js";
 import { registerPage } from "../app.js";
 
 // LINE 訂單: paste a LINE message (or a screenshot) → a checked draft → secretary / customer texts
@@ -21,6 +22,7 @@ let reference = emptyReference();
 export function resetLineOrderState() {
   Object.assign(state, { text: "", draft: null, saved: null, sheet: "test", restored: false, mode: "message", reorder: { customer: null, picks: {}, showAll: false, extra: [] } });
   reference = emptyReference();
+  resetQuoteState();
 }
 
 // Each browser tab keeps its own draft (sessionStorage survives a reload in the same tab),
@@ -53,6 +55,9 @@ function checkList(checks) {
 export function renderLineOrder(ctx, route) {
   const today = ctx.today();
   if (route?.query?.get("mode") === "reorder") state.mode = "reorder";
+  if (route?.query?.get("mode") === "quote") { state.mode = "quote"; queueQuoteCode(route.query.get("code")); }
+  const quoteBox = h("div", { className: "stack", dataset: { quote: "" } });
+  const drawQuoteBox = () => { if (state.mode === "quote") drawQuote(quoteBox, { ctx, reference }); };
   const refInfo = h("p", { className: "muted", dataset: { lineReference: "" }, text: "讀取商品與購買紀錄…" });
   const text = h("textarea", { rows: 6, value: state.text, dataset: { lineText: "" }, "aria-label": "LINE 訂購訊息", placeholder: "貼上客戶的 LINE 訊息，例如：\n興農 楊津銘：我要 1罐PDA、1罐LBA，然後要一罐macconkey，貨號211387；單獨一張發票。" });
   const status = h("p", { className: "muted", role: "status", dataset: { lineStatus: "" } });
@@ -327,6 +332,7 @@ export function renderLineOrder(ctx, route) {
     }
     if (state.draft) drawDraft();
     drawReorder();
+    drawQuoteBox();
   };
 
   (async () => {
@@ -341,6 +347,7 @@ export function renderLineOrder(ctx, route) {
     }
     drawDraft();
     drawReorder();
+    drawQuoteBox();
     // Only refresh in the background when already signed in: a sign-in prompt from here
     // would open Google's account window behind the user's back and freeze the tab.
     if (loaded.stale && ctx.transport && ctx.auth?.signedIn?.()) refresh();
@@ -435,13 +442,23 @@ export function renderLineOrder(ctx, route) {
     );
   }
 
-  const modeTabs = h("div", { className: "tabs", role: "tablist" }, [["message", "貼上訊息／截圖"], ["reorder", "常購快速下單"]].map(([value, label]) => h("button", {
+  const modeTabs = h("div", { className: "tabs", role: "tablist" }, [["message", "貼上訊息／截圖"], ["reorder", "常購快速下單"], ["quote", "產品報價"]].map(([value, label]) => h("button", {
     type: "button", className: "button small ghost", role: "tab", "aria-selected": String(state.mode === value), dataset: { lineMode: value }, text: label,
     onClick: () => { state.mode = value; ctx.render(); },
   })));
+  const intro = { reorder: "常買的品項直接勾選；價格帶這位客戶的最近成交價，可以改。", quote: "打料號或品名，看定價和最近成交價，改好報價後一鍵複製給客戶。" }[state.mode] || "貼上訊息或截圖，系統查客戶、料號與最近成交價；不確定的一律標「待確認」。";
+
+  if (state.mode === "quote") {
+    return h("div", { className: "stack line-order" }, [
+      h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "LINE 訂單" }), h("p", { text: intro })])]),
+      modeTabs,
+      h("div", { className: "section-head" }, [refInfo, h("button", { type: "button", className: "small ghost", dataset: { lineRefresh: "" }, text: "更新商品與購買紀錄", onClick: refresh })]),
+      quoteBox,
+    ]);
+  }
 
   return h("div", { className: "stack line-order" }, [
-    h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "LINE 訂單" }), h("p", { text: state.mode === "reorder" ? "常買的品項直接勾選；價格帶這位客戶的最近成交價，可以改。" : "貼上訊息或截圖，系統查客戶、料號與最近成交價；不確定的一律標「待確認」。" })])]),
+    h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "LINE 訂單" }), h("p", { text: intro })])]),
     modeTabs,
     state.mode === "reorder" ? h("div", { className: "stack" }, [
       h("div", { className: "section-head" }, [refInfo, h("button", { type: "button", className: "small ghost", dataset: { lineRefresh: "" }, text: "更新商品與購買紀錄", onClick: refresh })]),

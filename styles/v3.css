@@ -64,7 +64,16 @@
 .reorder-row > input { margin-top: 4px; }
 .reorder-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .reorder-inputs { grid-column: 2; display: grid; grid-template-columns: 1fr 1.4fr; gap: 6px; max-width: 320px; }
-.line-tax { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+.quote-results, .quote-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.quote-results:empty { display: none; }
+.quote-result, .quote-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.quote-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.quote-list-price { font-weight: 700; color: var(--accent); }
+.quote-deal-mine { font-weight: 600; }
+.quote-price { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.quote-price input { width: 110px; }
+@media (max-width: 520px) { .quote-item { flex-wrap: wrap; } .quote-item .quote-main { flex-basis: 100%; } }
+.line-tax {display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
 .line-totals { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding-top: 8px; border-top: 1px solid var(--line); }
 .line-output { margin: 0; white-space: pre-wrap; word-break: break-word; font: inherit; font-size: 0.92rem; line-height: 1.6; background: var(--bg); border-radius: var(--radius-sm); padding: 10px 12px; }
 .plan-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
