@@ -730,7 +730,9 @@ export function customerDisplayName(draft) {
   return contact && company.includes(contact) ? company : [company, contact].filter(Boolean).join(" ");
 }
 
+// 未稅 (the default) shows only 未稅 prices; switched to 含稅 it shows both, as the secretary needs both then.
 export function secretaryText(draft) {
+  const inclusive = draft.taxType?.value === "含稅";
   const lines = [
     `客戶姓名：${customerDisplayName(draft) || "待確認"}`,
     `客戶編號：${draft.customer.customerNo || "待確認"}`,
@@ -740,16 +742,16 @@ export function secretaryText(draft) {
     lines.push("", `${index + 1}. 訂購品項：${itemLabel(item)}${item.codeStatus === "確定" ? "" : "（待確認）"}`);
     lines.push(`規格：${item.spec || "待確認"}`);
     lines.push(`數量：${item.quantity ?? "待確認"}${item.quantity ? ` ${item.unit}` : ""}`);
-    lines.push(`價格：${item.unitPrice !== null ? `${money(item.unitPrice)}／${item.unit || "單位"}（未稅）；含稅 ${money(withTax(item.unitPrice))}` : "待確認"}`);
+    lines.push(`價格：${item.unitPrice !== null ? `${money(item.unitPrice)}／${item.unit || "單位"}（未稅）${inclusive ? `；含稅 ${money(withTax(item.unitPrice))}` : ""}` : "待確認"}`);
     if (item.priceSource) lines.push(`價格來源：${item.priceSource}`);
-    if (item.unitPrice !== null && item.quantity) lines.push(`小計：${roundedMoney(item.unitPrice * item.quantity)}（未稅）；含稅 ${itemGross(item).toLocaleString("en-US")}`);
+    if (item.unitPrice !== null && item.quantity) lines.push(`小計：${roundedMoney(item.unitPrice * item.quantity)}（未稅）${inclusive ? `；含稅 ${itemGross(item).toLocaleString("en-US")}` : ""}`);
     const flags = item.checks.filter((check) => ["stock", "expiry", "discontinued", "unit"].includes(check.field) || (check.field === "price" && !check.soft && item.unitPrice === null));
     if (flags.length || pending.length) lines.push(`注意：${[...new Set([...flags, ...pending].map((check) => check.text))].join("；")}`);
   });
   const totals = orderTotals(draft.items);
   lines.push("", `配送方式：${draft.delivery.value}`, `稅額：${draft.taxType.value}`);
   lines.push(`未稅合計：${roundedMoney(totals.net)}${totals.complete ? "" : `（另有 ${totals.missing} 項價格待確認）`}`);
-  lines.push(`稅額 5%：${totals.tax.toLocaleString("en-US")}`, `含稅合計：${totals.gross.toLocaleString("en-US")}`);
+  if (inclusive) lines.push(`稅額 5%：${totals.tax.toLocaleString("en-US")}`, `含稅合計：${totals.gross.toLocaleString("en-US")}`);
   const notes = [...draft.notes, draft.shipTime].filter(Boolean);
   lines.push(`備註：${notes.length ? notes.join("；") : "無"}`);
   return lines.join("\n");
