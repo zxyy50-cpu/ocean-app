@@ -5,6 +5,7 @@ import { loadReference } from "../../data/line-orders.js";
 import { quoteCandidates } from "../../data/quote.js";
 import { badge, h, input, toast } from "../dom.js";
 import { registerPage } from "../app.js";
+import { pageHeader } from "../shell.js";
 
 // 檢驗成本健檢: type the customer's monthly tests, compare "now" with our products, and hand over
 // a one-page report (picture or text). Typing never re-draws the page, so nothing typed is lost.
@@ -282,7 +283,7 @@ export function renderCostCheck(ctx, route) {
     type: "button", className: "button small ghost", role: "tab", "aria-selected": String(view.tab === value), dataset: { ccTab: value }, text: label, onClick: () => { view.tab = value; ctx.render(); },
   })));
   return h("div", { className: "stack cost-check" }, [
-    h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "檢驗成本健檢" }), h("p", { text: "算給客戶看：每月檢驗花多少、改用我們的方案省多少錢和人力、快幾天出結果。" })])]),
+    pageHeader("檢驗成本健檢", "", [], { note: "算給客戶看：改用我們的方案，每月省多少", help: "每個檢驗項目比較「現在」與「改用我們的方案」：耗材、陽性確認試驗、操作人工、出結果天數。競品價格可以從「競品參考價」一鍵帶入；我們的單價依商品清單規格換算，看不出包裝件數時請自己填。" }),
     tabs,
     view.tab === "prices" ? pricesView(ctx) : checkView(ctx),
   ]);

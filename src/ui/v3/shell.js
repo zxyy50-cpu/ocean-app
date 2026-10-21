@@ -34,6 +34,19 @@ const SECTION_OF = {
   ...Object.fromEntries(PAGE_GROUPS.flatMap((group) => group.tabs.map(([page]) => [page, group.name]))),
 };
 
+// Each area has its own colour (styles/v3.css), so a glance tells where you are.
+const SECTION_COLOUR = {
+  today: "today", triage: "today", prep: "today", capture: "today", visit: "today",
+  "line-order": "orders", orders: "orders",
+  cases: "cases", tidy: "cases", opportunities: "cases", case: "cases", opportunity: "cases",
+  plan: "develop", costcheck: "develop", customers: "develop",
+  kpi: "kpi",
+};
+
+export function sectionColour(pageName) {
+  return SECTION_COLOUR[pageName] || "neutral";
+}
+
 export function groupOf(pageName) {
   return PAGE_GROUPS.find((group) => group.tabs.some(([page]) => page === pageName)) || null;
 }
@@ -102,6 +115,8 @@ function updateSignIn(root, ctx) {
 
 export function updateShell(root, ctx, page) {
   const current = SECTION_OF[ctx.route.name] || ctx.route.name;
+  const shell = root.querySelector(".shell") || root;
+  shell.dataset.section = sectionColour(ctx.route.name);
   root.querySelector("[data-side-nav]")?.replaceChildren(
     ...MAIN_ITEMS.map((item) => navLink(item, current)),
     h("hr"),

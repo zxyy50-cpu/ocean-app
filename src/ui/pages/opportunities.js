@@ -114,7 +114,7 @@ export function renderOpportunities(ctx, route) {
   }
 
   return h("div", { className: "stack" }, [
-    pageHeader("商機", `${list.length} 件・總額 ${shortMoney(total)}・加權 ${shortMoney(weighted)}`, [layoutToggle, h("a", { className: "button primary", href: "#/opportunity/new", text: "＋ 新增商機" })].filter(Boolean)),
+    pageHeader("商機", "", [layoutToggle, h("a", { className: "button primary", href: "#/opportunity/new", text: "＋ 新增商機" })].filter(Boolean), { figure: `${list.length} 件・${shortMoney(total)}`, note: `加權 ${shortMoney(weighted)}` }),
     tabs,
     h("div", { className: "button-row" }, [h("div", { className: "search-box", style: { flex: "1 1 240px" } }, [search]), mine]),
     body,

@@ -89,10 +89,6 @@
 :root[data-skin="boho"] .bottom-nav { border-top: 4px solid; border-image: var(--weave) 1; }
 :root[data-skin="boho"] .card { border-color: var(--line); }
 :root[data-skin="boho"] .page-header h1::after { content: " ✺"; color: var(--sun); font-size: 0.8em; }
-:root[data-skin="boho"] .action-card:nth-of-type(4n + 1) { border-left: 5px solid var(--accent); }
-:root[data-skin="boho"] .action-card:nth-of-type(4n + 2) { border-left: 5px solid var(--sun); }
-:root[data-skin="boho"] .action-card:nth-of-type(4n + 3) { border-left: 5px solid var(--leaf); }
-:root[data-skin="boho"] .action-card:nth-of-type(4n + 4) { border-left: 5px solid var(--melon); }
 :root[data-skin="boho"] .action-card.is-late { border-left-color: var(--danger); }
 :root[data-skin="boho"] .badge { border-radius: 999px; }
 :root[data-skin="boho"] button.primary, :root[data-skin="boho"] .button.primary { box-shadow: inset 0 -3px 0 rgba(59, 42, 34, 0.18); }
@@ -229,10 +225,6 @@
 :root[data-skin="cockpit"] .home-head { border: 1px solid var(--line); }
 :root[data-skin] .bottom-nav .nav-primary .nav-icon { background: var(--sun); color: var(--sun-ink); }
 :root[data-skin="summer"] .capture-entry { background: var(--hero); }
-:root[data-skin="summer"] .action-card:nth-of-type(4n + 1) { border-left: 5px solid var(--accent); }
-:root[data-skin="summer"] .action-card:nth-of-type(4n + 2) { border-left: 5px solid var(--sun); }
-:root[data-skin="summer"] .action-card:nth-of-type(4n + 3) { border-left: 5px solid var(--melon); }
-:root[data-skin="summer"] .action-card:nth-of-type(4n + 4) { border-left: 5px solid var(--leaf); }
 :root[data-skin="summer"] .action-card.is-late { border-left-color: var(--melon); }
 
 /* Appearance picker in 設定 */

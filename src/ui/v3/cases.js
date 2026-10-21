@@ -7,7 +7,8 @@ import { customerInAreas } from "../../data/tags.js";
 import { isOpportunityOverdue, opportunityAttention } from "../../data/today.js";
 import { OPEN_OPPORTUNITY_STAGES } from "../../data/schema.js";
 import { tidyQueue } from "../../data/tidy.js";
-import { badge, emptyState, field, formToObject, h, input, money, select, showErrors, toast } from "../dom.js";
+import { badge, emptyState, field, formToObject, h, input, money, select, shortMoney, showErrors, toast } from "../dom.js";
+import { pageHeader } from "../shell.js";
 import { registerPage } from "../app.js";
 import { changeStage, lostDialog, wonDialog } from "../pages/opportunity.js";
 import { openContactEditor } from "../forms/customer-forms.js";
@@ -58,10 +59,14 @@ export function renderCases(ctx) {
 
   const toTidy = tidyQueue(ctx.model, ctx.model.all, { today, areas: state.mineOnly ? ctx.settings.myAreas || [] : [] }).queue.length;
   return h("div", { className: "stack" }, [
-    h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "案子" }), h("p", { text: `進行中 ${pool.length} 件・${money(total)}` })]), h("div", { className: "page-actions" }, [
-      toTidy ? h("a", { className: "button primary", href: "#/tidy", dataset: { tidyEntry: "" }, text: `整理商機（${toTidy} 件待整理）` }) : null,
+    pageHeader("案子", "", [
+      toTidy ? h("a", { className: "button primary", href: "#/tidy", dataset: { tidyEntry: "" }, text: `開始整理（${toTidy} 件待整理）` }) : null,
       h("a", { className: "button ghost", href: "#/opportunities", text: "完整清單" }),
-    ])]),
+    ], {
+      figure: `${pool.length} 件・${shortMoney(total)}`,
+      note: `加權 ${shortMoney(pool.reduce((sum, opportunity) => sum + (Number(opportunity.amount) || 0) * (Number(opportunity.probability) || 0) / 100, 0))}・議價 ${pool.filter((item) => item.stage === "議價").length}・提案 ${pool.filter((item) => item.stage === "提案").length}・接觸 ${pool.filter((item) => item.stage === "接觸").length}`,
+      help: "「先看這幾件」是提案、議價中有紅燈或逾期的案子，金額大的在前。其餘依階段列出；接觸階段預設收起來。要一件一件整理匯入的舊商機，按「開始整理」。",
+    }),
     h("div", { className: "search-box" }, [search]),
     mine,
     flagged.length ? h("section", { className: "card", dataset: { caseAttention: "" } }, [

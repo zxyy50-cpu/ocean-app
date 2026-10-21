@@ -80,9 +80,23 @@ export function updateShell(root, ctx, page) {
   root.querySelectorAll("[data-sync-slot]").forEach((slot) => slot.replaceChildren(syncBadge(ctx)));
 }
 
-export function pageHeader(title, subtitle = "", actions = []) {
-  return h("header", { className: "page-header" }, [
-    h("div", {}, [h("h1", { text: title }), subtitle ? h("p", { text: subtitle }) : null]),
-    actions.length ? h("div", { className: "page-actions" }, actions) : null,
+// A small「?」 that opens an explanation, so long how-it-works text stays out of the way.
+export function helpTip(text, label = "說明") {
+  if (!text) return null;
+  return h("details", { className: "help-tip", dataset: { helpTip: "" } }, [h("summary", { "aria-label": label, title: label, text: "?" }), h("div", { className: "help-tip-body", text })]);
+}
+
+// Page header: the title, the one number that matters on this page, a short note, a「?」 for
+// the explanation, and at most one primary action (the others should be ghost buttons).
+export function pageHeader(title, subtitle = "", actions = [], { figure = "", note = "", help = "", progress = null } = {}) {
+  return h("header", { className: `page-header${figure ? " has-figure" : ""}` }, [
+    h("div", { className: "page-header-main" }, [
+      h("div", { className: "page-title-row" }, [h("h1", { text: title }), helpTip(help)]),
+      figure ? h("strong", { className: "page-figure", dataset: { pageFigure: "" }, text: figure }) : null,
+      note ? h("small", { className: "page-note", text: note }) : null,
+      subtitle ? h("p", { text: subtitle }) : null,
+      progress !== null ? h("div", { className: "page-progress", role: "img", "aria-label": `${Math.round(progress)}%` }, [h("i", { style: { width: `${Math.max(0, Math.min(100, progress))}%` } })]) : null,
+    ]),
+    actions.filter(Boolean).length ? h("div", { className: "page-actions" }, actions.filter(Boolean)) : null,
   ]);
 }

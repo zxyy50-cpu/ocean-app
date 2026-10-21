@@ -8,6 +8,7 @@ import { createDraftStore } from "../../data/drafts.js";
 import { customerIdentity, primaryContact } from "../../data/model.js";
 import { chipGroup, field, h, input, select, showErrors, toast } from "../dom.js";
 import { registerPage } from "../app.js";
+import { pageHeader } from "../shell.js";
 import { openCustomerEditor } from "../forms/customer-forms.js";
 
 const QUICK_DATES = [["明天", 1], ["3 天後", 3], ["下週", 7], ["2 週後", 14]];
@@ -169,7 +170,7 @@ export function renderCapture(ctx, route) {
   text.addEventListener("input", () => { persist(); clearTimeout(guessTimer); guessTimer = setTimeout(applyGuess, 350); });
 
   form.append(
-    h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "記錄" }), h("p", { text: "講完或寫完就好，其他交給系統整理。" })])]),
+    pageHeader("記錄", "", [], { help: "講完或寫完就好，其他交給系統整理。" }),
     h("p", { className: "field-error", role: "alert", hidden: true, dataset: { formErrors: "" } }),
     h("div", { className: "field capture-input", dataset: { field: "detailedNote" } }, [text]),
     preview,

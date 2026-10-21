@@ -12,6 +12,7 @@ import {
 import { badge, confirmDialog, emptyState, h, money, toast } from "../dom.js";
 import { drawQuote, queueQuoteCode, resetQuoteState } from "./quote-panel.js";
 import { registerPage } from "../app.js";
+import { pageHeader } from "../shell.js";
 
 // LINE 訂單: paste a LINE message (or a screenshot) → a checked draft → secretary / customer texts
 // → saved in the app and written to LINE訂單整理. Nothing is written until the user presses save.
@@ -460,7 +461,7 @@ export function renderLineOrder(ctx, route) {
 
   if (state.mode === "quote") {
     return h("div", { className: "stack line-order" }, [
-      h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "LINE 訂單" }), h("p", { text: intro })])]),
+      pageHeader("LINE 訂單", "", [], { help: intro }),
       modeTabs,
       h("div", { className: "section-head" }, [refInfo, h("button", { type: "button", className: "small ghost", dataset: { lineRefresh: "" }, text: "更新商品與購買紀錄", onClick: refresh })]),
       quoteBox,
@@ -468,7 +469,7 @@ export function renderLineOrder(ctx, route) {
   }
 
   return h("div", { className: "stack line-order" }, [
-    h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "LINE 訂單" }), h("p", { text: intro })])]),
+    pageHeader("LINE 訂單", "", [], { help: intro }),
     modeTabs,
     state.mode === "reorder" ? h("div", { className: "stack" }, [
       h("div", { className: "section-head" }, [refInfo, h("button", { type: "button", className: "small ghost", dataset: { lineRefresh: "" }, text: "更新商品與購買紀錄", onClick: refresh })]),

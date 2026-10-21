@@ -3,9 +3,11 @@ import { priorityList, zoneFunnel } from "../../data/devplan.js";
 import { GROUP_NAMES } from "../../data/industry-groups.js";
 import { badge, emptyState, h } from "../dom.js";
 import { registerPage } from "../app.js";
+import { pageHeader } from "../shell.js";
 import { openHoldDialog } from "../forms/hold.js";
 
 const PAGE = 40;
+let lastCounts = { total: 0, a: 0 };
 const state = { view: "list", area: "", tier: "", grade: "", group: "", smallOnly: false, notContactedOnly: true, mineOnly: true, limit: PAGE };
 
 export function resetPlanState() {
@@ -50,6 +52,7 @@ function prospectCard(ctx, item, selected, refreshBar) {
 function listView(ctx, areas) {
   const today = ctx.today();
   const items = priorityList(ctx.model, { today, areas, area: state.area, tier: state.tier, grade: state.grade, group: state.group, smallOnly: state.smallOnly, notContactedOnly: state.notContactedOnly });
+  lastCounts = { total: items.length, a: items.filter((item) => item.grade === "A").length };
   const shown = items.slice(0, state.limit);
   const selected = new Set();
   const bar = h("div", { className: "plan-bulk", dataset: { planBulk: "" } });
@@ -83,7 +86,7 @@ function listView(ctx, areas) {
       chip("只看規模小", state.smallOnly, { planSmall: "" }, (value) => { state.smallOnly = value; state.limit = PAGE; ctx.render(); }),
       selectSmall,
     ]),
-    h("p", { className: "muted", dataset: { planCount: "" }, text: `${items.length} 家可開發（A ${items.filter((item) => item.grade === "A").length}・B ${items.filter((item) => item.grade === "B").length}・C ${items.filter((item) => item.grade === "C").length}），A 級在前。A＝檢驗需求高且資本 5 千萬以上，或衰退客戶、Costco 供應商；B＝需求高＋資本 1 千萬以上，或需求中＋5 千萬以上。分數＝檢驗需求（40）＋資本額（30）＋舊客戶（最多 30）。` }),
+    h("p", { className: "muted", dataset: { planCount: "" }, text: `${items.length} 家可開發（A ${items.filter((item) => item.grade === "A").length}・B ${items.filter((item) => item.grade === "B").length}・C ${items.filter((item) => item.grade === "C").length}），A 級在前。` }),
     bar,
     shown.length ? h("ul", { className: "plan-list" }, shown.map((item) => prospectCard(ctx, item, selected, refreshBar))) : h("section", { className: "card" }, [emptyState("這個條件下沒有要開發的客戶", "換個區域，或取消「只看未接觸」。")]),
     items.length > state.limit ? h("button", { type: "button", className: "ghost", text: `顯示更多（還有 ${items.length - state.limit} 家）`, onClick: () => { state.limit += PAGE; ctx.render(); } }) : null,
@@ -124,10 +127,15 @@ export function renderPlan(ctx, route) {
     type: "button", className: "button small ghost", role: "tab", "aria-selected": String(state.view === value), dataset: { planView: value }, text: label,
     onClick: () => { state.view = value; ctx.render(); },
   })));
+  const body = state.view === "zones" ? zonesView(ctx, areas) : listView(ctx, areas);
   return h("div", { className: "stack" }, [
-    h("header", { className: "page-header" }, [h("div", {}, [h("h1", { text: "開發計畫" }), h("p", { text: "先找值得開發的；規模太小或不適合的標「不開發」，就不會再出現。" })])]),
+    pageHeader("開發計畫", "", [], {
+      figure: state.view === "zones" ? "各區達成率" : `A 級 ${lastCounts.a} 家先開發`,
+      note: state.view === "zones" ? "" : `符合條件共 ${lastCounts.total} 家`,
+      help: "先找值得開發的；規模太小或不適合的標「不開發」，就不會再出現。A 級＝檢驗需求高且資本 5 千萬以上，或 2025 衰退客戶、Costco 供應商；B 級＝需求高＋資本 1 千萬以上，或需求中＋5 千萬以上；其餘 C 級。分數＝檢驗需求（40）＋資本額（30）＋舊客戶（最多 30）。",
+    }),
     h("div", { className: "button-row" }, [tabs, chip("只看我的區域", state.mineOnly, { planMineOnly: "" }, (value) => { state.mineOnly = value; state.area = ""; ctx.render(); })]),
-    state.view === "zones" ? zonesView(ctx, areas) : listView(ctx, areas),
+    body,
   ]);
 }
 

@@ -4,6 +4,7 @@ import { badge, emptyState, h, money, shortMoney } from "../dom.js";
 import { registerPage } from "../app.js";
 import { pageHeader } from "../shell.js";
 import { weeklySection } from "./kpi-weekly.js";
+import { weeklyReport } from "../../data/kpi-weekly.js";
 
 const state = { period: "month", mineOnly: false, view: "weekly" };
 
@@ -22,7 +23,14 @@ export function renderKpi(ctx, route) {
   const asked = route?.query?.get?.("view");
   if (asked === "weekly" || asked === "stats") state.view = asked;
   if (state.view === "weekly") {
-    return h("div", { className: "stack" }, [pageHeader("KPI", "每週更新三項業績，週會直接用這頁報告。"), viewTabs(ctx), weeklySection(ctx)]);
+    const report = weeklyReport(ctx.model, ctx.model.all, ctx.today());
+    const main = report.latest ? report.goals[0] : null;
+    return h("div", { className: "stack" }, [pageHeader("KPI", "", [], {
+      figure: main ? `${main.label.split(" ")[0]} 達成 ${main.percent}%` : "本週還沒填業績",
+      note: main ? `${main.behindPace >= 0 ? "超前" : "落後"}應有進度 ${shortMoney(Math.abs(main.behindPace))}・預估全年 ${shortMoney(main.projected)}` : "",
+      progress: main ? main.percent : null,
+      help: "每週更新三項業績，週會直接用這頁報告。",
+    }), viewTabs(ctx), weeklySection(ctx)]);
   }
   const today = ctx.today();
   const data = buildKpi(ctx.model, { period: state.period, today, myAreas: ctx.settings.myAreas, mineOnly: state.mineOnly });

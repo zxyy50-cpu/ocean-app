@@ -1,10 +1,11 @@
 import { formatShortDate, weekdayLabel } from "../../core/dates.js";
 import { requestId } from "../../core/ids.js";
 import { buildActions } from "../../data/actions.js";
-import { meetingReminders } from "../../data/kpi-weekly.js";
+import { meetingReminders, weeklyReport } from "../../data/kpi-weekly.js";
+import { pageHeader } from "../shell.js";
 import { customerIdentity } from "../../data/model.js";
 import { completeReminder, snoozeReminder } from "../../data/reminders.js";
-import { badge, emptyState, h, toast } from "../dom.js";
+import { badge, emptyState, h, shortMoney, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { splitPhones } from "../pages/customer.js";
 
@@ -59,30 +60,28 @@ export function renderHome(ctx) {
   const hasCustomers = ctx.model.customers.length > 0;
   const { done, total } = data.progress;
 
-  const head = h("section", { className: "home-head" }, [
-    h("div", {}, [h("h1", { text: `今天 ${formatShortDate(today)} 週${weekdayLabel(today)}` }), h("p", { className: "muted", dataset: { homeSummary: "" }, text: summary(data) })]),
-    h("div", { className: "home-progress", "aria-label": `今日完成 ${done} / ${total}` }, [h("strong", { text: `${done} / ${total}` }), h("small", { text: "完成" })]),
-  ]);
+  // The header band: how much is left today, and the year's main goal underneath.
+  const left = Math.max(0, total - done);
+  const kpi = weeklyReport(ctx.model, ctx.model.all, today);
+  const main = kpi.latest ? kpi.goals[0] : null;
+  const head = pageHeader(`今天 ${formatShortDate(today)} 週${weekdayLabel(today)}`, "", [
+    h("span", { className: "badge", "aria-label": `今日完成 ${done} / ${total}`, text: `完成 ${done} / ${total}` }),
+  ], {
+    figure: left ? `${left} 件要處理` : "沒有急事",
+    note: main ? `${main.label}：達成 ${main.percent}%・${main.behindPace >= 0 ? "超前" : "落後"}應有進度 ${shortMoney(Math.abs(main.behindPace))}` : "",
+    progress: main ? main.percent : null,
+  });
+  head.querySelector(".page-header-main").append(h("small", { className: "page-note", dataset: { homeSummary: "" }, text: summary(data) }));
   const captureEntry = h("a", { className: "capture-entry", href: "#/capture", dataset: { captureEntry: "" } }, [h("span", { "aria-hidden": "true", text: "🎙" }), h("span", { text: "說說剛剛的拜訪…" })]);
 
   const blocks = [];
   if (data.now.length) blocks.push(h("section", { className: "home-block", dataset: { homeSection: "now" } }, [h("h2", { text: "現在該做" }), ...data.now.map((item) => actionCard(ctx, item))]));
   if (data.schedule.length) blocks.push(h("section", { className: "home-block", dataset: { homeSection: "schedule" } }, [h("h2", { text: "今天要拜訪" }), ...data.schedule.map((item) => actionCard(ctx, item, { visit: true }))]));
-  if (data.signals.length) {
-    blocks.push(h("section", { className: "home-block", dataset: { homeSection: "signals" } }, [
-      h("h2", { text: "新機會" }),
-      ...data.signals.map((item) => {
-        const order = ctx.model.ordersById.get(item.orderId);
-        return h("a", { className: "action-card compact", href: "#/orders?view=signals" }, [h("div", { className: "action-main" }, [
-          h("strong", { text: order ? ctx.model.customerName(order.customerId) : item.customerNo || "新客戶" }),
-          h("span", { text: `第一次買 ${item.productName || item.productCode}` }),
-        ])]);
-      }),
-      data.signalCount > data.signals.length ? h("a", { className: "more-link", href: "#/orders?view=signals", text: `還有 ${data.signalCount - data.signals.length} 個新購提醒 →` }) : null,
-    ]));
-  }
+  // Information, not tasks: one quiet line each, details one tap away.
+  const firstBuys = data.signals.slice(0, 2).map((item) => ctx.model.customerName(ctx.model.ordersById.get(item.orderId)?.customerId) || item.customerNo).filter(Boolean);
   const meeting = meetingReminders(ctx.model, ctx.model.all, today);
   const lines = [
+    data.signalCount ? h("a", { className: "summary-line", href: "#/orders?view=signals", dataset: { homeSection: "signals" } }, [h("span", { text: `新購提醒 ${data.signalCount} 件${firstBuys.length ? `（${firstBuys.join("、")}${data.signalCount > firstBuys.length ? "…" : ""}）` : ""}` }), h("span", { text: "看全部 →" })]) : null,
     meeting ? h("a", { className: "summary-line warn", href: "#/kpi?view=weekly", dataset: { kpiReminder: "" } }, [
       h("span", { text: `${meeting.daysLeft ? "明天" : "今天"}週會：${[meeting.missingWeek ? "本週 KPI 金額還沒填" : "", meeting.stale.length ? `主管關注 ${meeting.stale.length} 案還沒更新（${meeting.stale.slice(0, 2).map((row) => row.opportunity.name).join("、")}${meeting.stale.length > 2 ? "…" : ""}）` : ""].filter(Boolean).join("；")}` }),
       h("span", { text: "去更新 →" }),

@@ -5,6 +5,7 @@ import { LOST_REASONS, OPEN_OPPORTUNITY_STAGES } from "../../data/schema.js";
 import { laterDate, tidyAction, tidyQueue, tidyReasons } from "../../data/tidy.js";
 import { badge, emptyState, h, input, money, toast } from "../dom.js";
 import { registerPage } from "../app.js";
+import { pageHeader } from "../shell.js";
 
 // 商機整理: one case per card, one tap per decision, then straight on to the next one.
 const view = { mineOnly: true, skipped: new Set(), panel: "" };
@@ -32,14 +33,13 @@ export function renderTidy(ctx) {
 
   const mine = h("label", { className: "chip" }, [h("input", { type: "checkbox", checked: view.mineOnly, dataset: { tidyMineOnly: "" }, onChange: (event) => { view.mineOnly = event.target.checked; ctx.render(); } }), h("span", { text: "只看我的區域" })]);
   const percent = total ? Math.round((done / total) * 100) : 100;
-  const head = h("section", { className: "card stack tidy-head", dataset: { tidyProgress: "" } }, [
-    h("div", { className: "section-head" }, [
-      h("div", {}, [h("h1", { text: "商機整理" }), h("p", { className: "muted", text: "一件一張：還要追就延後結案日，結束的就標成交或沒成，不是商機的封存。每一步都可以復原。" })]),
-      mine,
-    ]),
-    h("div", { className: "section-head" }, [h("strong", { text: `已整理 ${done} / ${total}` }), h("small", { className: "muted", text: `還剩 ${queue.length} 件${view.skipped.size ? `（跳過 ${view.skipped.size} 件）` : ""}` })]),
-    h("div", { className: "meter", role: "img", "aria-label": `已整理 ${percent}%` }, [h("i", { style: { width: `${percent}%` } })]),
-  ]);
+  const head = pageHeader("商機整理", "", [mine], {
+    figure: `已整理 ${done} / ${total}`,
+    note: `還剩 ${queue.length} 件${view.skipped.size ? `（跳過 ${view.skipped.size} 件）` : ""}`,
+    progress: percent,
+    help: "一件一張：還要追就延後結案日，結束的就標成交或沒成，不是商機的封存。每一步都可以復原。",
+  });
+  head.dataset.tidyProgress = "";
 
   if (!opportunity) {
     return h("div", { className: "stack tidy" }, [head, h("section", { className: "card" }, [emptyState(

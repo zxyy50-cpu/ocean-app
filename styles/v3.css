@@ -1,5 +1,55 @@
 /* v3: action-first, phone-first. Builds on the tokens and components in app.css. */
 
+/* ---- Area colours: the shell carries data-section; every page inside takes that area's colour
+   for its header band, primary button, selected tabs and the bar on the left of action cards. ---- */
+.shell.v3 { --sec: #185FA5; --sec-soft: #E6F1FB; --sec-ink: #0C447C; --sec-on: #ffffff; --sec-icon: "◎"; }
+.shell.v3[data-section="orders"] { --sec: #3B6D11; --sec-soft: #EAF3DE; --sec-ink: #27500A; --sec-icon: "✉"; }
+.shell.v3[data-section="cases"] { --sec: #993C1D; --sec-soft: #FAECE7; --sec-ink: #712B13; --sec-icon: "△"; }
+.shell.v3[data-section="develop"] { --sec: #534AB7; --sec-soft: #EEEDFE; --sec-ink: #3C3489; --sec-icon: "➚"; }
+.shell.v3[data-section="kpi"] { --sec: #854F0B; --sec-soft: #FAEEDA; --sec-ink: #633806; --sec-icon: "▤"; }
+.shell.v3[data-section="neutral"] { --sec: #5F5E5A; --sec-soft: #F1EFE8; --sec-ink: #444441; --sec-icon: "⌕"; }
+/* Dark skins and dark mode: lighter colour on a deep tint. */
+:root:is([data-skin="cockpit"], [data-skin="fantasy"], [data-skin="wizard"]) .shell.v3 { --sec: #85B7EB; --sec-soft: #10273d; --sec-ink: #B5D4F4; --sec-on: #0b1622; }
+:root:is([data-skin="cockpit"], [data-skin="fantasy"], [data-skin="wizard"]) .shell.v3[data-section="orders"] { --sec: #97C459; --sec-soft: #1c2c10; --sec-ink: #C0DD97; }
+:root:is([data-skin="cockpit"], [data-skin="fantasy"], [data-skin="wizard"]) .shell.v3[data-section="cases"] { --sec: #F0997B; --sec-soft: #36190f; --sec-ink: #F5C4B3; }
+:root:is([data-skin="cockpit"], [data-skin="fantasy"], [data-skin="wizard"]) .shell.v3[data-section="develop"] { --sec: #AFA9EC; --sec-soft: #221e48; --sec-ink: #CECBF6; }
+:root:is([data-skin="cockpit"], [data-skin="fantasy"], [data-skin="wizard"]) .shell.v3[data-section="kpi"] { --sec: #EF9F27; --sec-soft: #33230b; --sec-ink: #FAC775; }
+:root:is([data-skin="cockpit"], [data-skin="fantasy"], [data-skin="wizard"]) .shell.v3[data-section="neutral"] { --sec: #B4B2A9; --sec-soft: #2a2927; --sec-ink: #D3D1C7; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .shell.v3 { --sec: #85B7EB; --sec-soft: #10273d; --sec-ink: #B5D4F4; --sec-on: #0b1622; }
+  :root:not([data-theme="light"]) .shell.v3[data-section="orders"] { --sec: #97C459; --sec-soft: #1c2c10; --sec-ink: #C0DD97; }
+  :root:not([data-theme="light"]) .shell.v3[data-section="cases"] { --sec: #F0997B; --sec-soft: #36190f; --sec-ink: #F5C4B3; }
+  :root:not([data-theme="light"]) .shell.v3[data-section="develop"] { --sec: #AFA9EC; --sec-soft: #221e48; --sec-ink: #CECBF6; }
+  :root:not([data-theme="light"]) .shell.v3[data-section="kpi"] { --sec: #EF9F27; --sec-soft: #33230b; --sec-ink: #FAC775; }
+  :root:not([data-theme="light"]) .shell.v3[data-section="neutral"] { --sec: #B4B2A9; --sec-soft: #2a2927; --sec-ink: #D3D1C7; }
+}
+/* Inside the page the area colour is the accent; the side bar and bottom bar keep the skin's. */
+.shell.v3 .page, .shell.v3 .group-tab-slot { --accent: var(--sec); --accent-soft: var(--sec-soft); --accent-ink: var(--sec-on); }
+
+/* Header band: title, the key number, a short note, a「?」 for the explanation. */
+.shell.v3 .page-header { position: relative; align-items: center; padding: 14px 16px 14px 18px; border-radius: var(--radius); background: var(--sec-soft); color: var(--sec-ink); }
+.shell.v3 .page-header::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 0 3px 3px 0; background: var(--sec); }
+.shell.v3 .page-header h1 { color: var(--sec-ink); margin: 0; font-size: 1.25rem; }
+.shell.v3 .page-header h1::before { content: var(--sec-icon); margin-right: 8px; font-size: 0.9em; opacity: 0.8; }
+.shell.v3 .page-header p, .shell.v3 .page-header .page-note { color: var(--sec-ink); opacity: 0.85; margin: 2px 0 0; }
+.page-header-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 220px; }
+.page-title-row { display: flex; align-items: center; gap: 8px; }
+.page-figure { font-size: 1.6rem; line-height: 1.2; color: var(--sec-ink); }
+.page-progress { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--sec) 22%, transparent); margin-top: 6px; max-width: 420px; }
+.page-progress i { display: block; height: 100%; border-radius: 3px; background: var(--sec); }
+.help-tip { position: relative; display: inline-block; }
+.help-tip > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid currentColor; font-size: 0.78rem; font-weight: 700; opacity: 0.7; }
+.help-tip > summary::-webkit-details-marker { display: none; }
+.help-tip[open] > summary { opacity: 1; }
+.help-tip-body { position: absolute; z-index: 30; top: 28px; left: 0; width: min(340px, 80vw); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 0.88rem; font-weight: 400; line-height: 1.55; box-shadow: var(--shadow); }
+
+/* Two kinds of card: things to do (colour bar on the left) and quiet one-line information. */
+.shell.v3 .action-card { border-left: 4px solid var(--sec); border-radius: 0 var(--radius) var(--radius) 0; }
+.shell.v3 .action-card.is-late { border-left-color: var(--warn); }
+.shell.v3 .summary-line:not(.warn) { background: transparent; border-style: dashed; color: var(--muted); }
+.shell.v3 .summary-line:not(.warn) span:last-child { color: var(--sec); font-weight: 600; }
+.shell.v3 .tabs [aria-selected="true"], .shell.v3 .group-tabs a[aria-current="page"] { background: var(--sec-soft); color: var(--sec-ink); border-color: transparent; }
+
 .v3 .topbar-actions { display: flex; align-items: center; gap: 8px; }
 .v3 .icon-button { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; color: var(--ink); text-decoration: none; font-size: 22px; }
 .v3 .side-nav hr { border: 0; border-top: 1px solid var(--line); margin: 8px 12px; }
