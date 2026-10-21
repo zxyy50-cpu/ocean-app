@@ -7,13 +7,17 @@ import { opportunityTitle } from "../../data/products.js";
 import { openMergeGroupDialog } from "../forms/merge-group.js";
 import { customerIdentity } from "../../data/model.js";
 import { badge, emptyState, h, money } from "../dom.js";
+import { searchCustomers } from "../../data/customers.js";
+import { AREA_PARENTS, areaOptions } from "../../data/tags.js";
+import { openCustomerEditor } from "../forms/customer-forms.js";
 import { registerPage } from "../app.js";
 
-const state = { query: "" };
+// 搜尋 also does what 客戶探索 did: filter by area or ★, and add a customer.
+const state = { query: "", areas: [], importantOnly: false };
 let catalog = null;
 
 export function resetSearchState() {
-  state.query = "";
+  Object.assign(state, { query: "", areas: [], importantOnly: false });
   catalog = null;
 }
 
@@ -82,8 +86,22 @@ export function renderSearch(ctx, route) {
   const results = h("div", { className: "stack", dataset: { searchResults: "" } });
   const draw = () => {
     const query = state.query;
-    if (!query.trim()) { results.replaceChildren(recent(ctx)); return; }
-    const found = globalSearch(ctx.model, query, { myAreas: ctx.settings.myAreas, today: ctx.today() });
+    const filtering = state.areas.length > 0 || state.importantOnly;
+    if (!query.trim() && !filtering) {
+      const priority = searchCustomers(ctx.model, { myAreas: ctx.settings.myAreas, today: ctx.today(), limit: 8 });
+      results.replaceChildren(...[
+        priority.items.length ? group("重要與待跟進", priority.total, priority.items.length, priority.items.map(({ customer }) => h("li", {}, [h("a", { href: `#/customer/${encodeURIComponent(customer.id)}` }, [h("strong", { text: `${customer.important ? "★ " : ""}${customer.name}` }), h("small", { className: "muted", text: customerIdentity(ctx.model, customer) })])]))) : null,
+        recent(ctx),
+      ].filter(Boolean));
+      return;
+    }
+    const found = query.trim() ? globalSearch(ctx.model, query, { myAreas: ctx.settings.myAreas, today: ctx.today() }) : { customers: [], activities: [], opportunities: [], items: [], totals: { customers: 0, activities: 0, opportunities: 0, items: 0 } };
+    // With an area or ★ chosen, the customer list follows the filters (what 客戶探索 used to show).
+    if (filtering) {
+      const filtered = searchCustomers(ctx.model, { query, areas: state.areas, importantOnly: state.importantOnly, myAreas: ctx.settings.myAreas, today: ctx.today(), limit: 60 });
+      found.customers = filtered.items;
+      found.totals = { ...found.totals, customers: filtered.total };
+    }
     // Same-name records get one 「整理」 button (on the first of them shown).
     const offered = new Set();
     const tidyButton = (customer) => {
@@ -130,8 +148,28 @@ export function renderSearch(ctx, route) {
         h("small", { className: "muted", text: [ctx.model.customerName(order.customerId), order.orderDate, item.productCode].filter(Boolean).join("・") }),
       ])]))),
     ].filter(Boolean);
-    results.replaceChildren(...(sections.length ? sections : [emptyState(`找不到「${query}」`, "換個關鍵字試試：公司簡稱、聯絡人、電話後四碼、產品名稱。")]));
+    results.replaceChildren(...(sections.length ? sections : [emptyState(query.trim() ? `找不到「${query}」` : "這個條件下沒有客戶", "換個關鍵字或區域試試：公司簡稱、聯絡人、電話後四碼、產品名稱。", addCustomerButton(ctx))]));
   };
+  const options = areaOptions(ctx.model.customers, ctx.settings.myAreas);
+  const areaChip = (option) => h("label", { className: "chip" }, [
+    h("input", { type: "checkbox", value: option.area, checked: state.areas.includes(option.area), dataset: { areaFilter: option.area }, onChange: (event) => {
+      state.areas = event.target.checked ? [...state.areas, option.area] : state.areas.filter((area) => area !== option.area);
+      draw();
+    } }),
+    h("span", { text: `${option.area} ${option.count}` }),
+  ]);
+  // Counties up front; the many industrial zones and other areas fold away.
+  const counties = options.mine.filter((option) => !AREA_PARENTS[option.area]);
+  const zones = options.mine.filter((option) => AREA_PARENTS[option.area]);
+  const zoneOpen = state.areas.some((area) => zones.some((option) => option.area === area));
+  const otherOpen = state.areas.some((area) => options.others.some((option) => option.area === area));
+  const filters = h("div", { className: "search-filters", dataset: { searchFilters: "" } }, [
+    ...counties.map(areaChip),
+    h("label", { className: "chip" }, [h("input", { type: "checkbox", checked: state.importantOnly, dataset: { importantOnly: "" }, onChange: (event) => { state.importantOnly = event.target.checked; draw(); } }), h("span", { text: "★ 只看重要" })]),
+    addCustomerButton(ctx),
+    zones.length ? h("details", { className: "other-areas", open: zoneOpen }, [h("summary", { text: `工業區（${zones.length}）` }), h("div", { className: "chip-group" }, zones.map(areaChip))]) : null,
+    options.others.length ? h("details", { className: "other-areas", open: otherOpen }, [h("summary", { text: `其他區域（${options.others.length}）` }), h("div", { className: "chip-group" }, options.others.map(areaChip))]) : null,
+  ]);
   // 商品清單 lives in the order reference; once it is loaded, products show up too.
   loadReference(ctx.db).then((loaded) => {
     if (loaded.reference === catalog) return;
@@ -143,7 +181,13 @@ export function renderSearch(ctx, route) {
   input.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => { state.query = input.value; draw(); }, 150); });
   draw();
   setTimeout(() => { if (!state.query) input.focus?.(); }, 0);
-  return h("div", { className: "stack" }, [h("div", { className: "search-box sticky-search" }, [input]), results]);
+  return h("div", { className: "stack" }, [h("div", { className: "search-box sticky-search" }, [input]), filters, results]);
+}
+
+function addCustomerButton(ctx) {
+  return h("button", { type: "button", className: "small ghost", dataset: { addCustomer: "" }, text: "＋ 新增客戶", onClick: () => openCustomerEditor(ctx, { onSaved: (customer) => ctx.navigate(`customer/${customer.id}`) }) });
 }
 
 registerPage("search", { title: "搜尋", render: renderSearch, keepOnDataChange: true });
+// 客戶探索 now lives here; its old link opens this page.
+registerPage("customers", { title: "搜尋", render: renderSearch, keepOnDataChange: true });

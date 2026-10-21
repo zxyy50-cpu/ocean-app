@@ -8,6 +8,7 @@ import { caseRedFlags } from "../../data/case-analysis.js";
 import { badge, emptyState, field, h, input, money, openDialog, select, shortMoney, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { pageHeader } from "../shell.js";
+import { caseViews } from "../v3/shell.js";
 
 const VIEWS = [
   { value: "open", label: "進行中" }, { value: "overdue", label: "已逾期" }, { value: "won", label: "已成交" }, { value: "lost", label: "未成交" },
@@ -114,7 +115,7 @@ export function renderOpportunities(ctx, route) {
   }
 
   return h("div", { className: "stack" }, [
-    pageHeader("商機", "", [layoutToggle, h("a", { className: "button primary", href: "#/opportunity/new", text: "＋ 新增商機" })].filter(Boolean), { figure: `${list.length} 件・${shortMoney(total)}`, note: `加權 ${shortMoney(weighted)}` }),
+    pageHeader("案子", "", [caseViews("opportunities"), layoutToggle, h("a", { className: "button primary", href: "#/opportunity/new", text: "＋ 新增商機" })].filter(Boolean), { figure: `${list.length} 件・${shortMoney(total)}`, note: `全部清單・加權 ${shortMoney(weighted)}` }),
     tabs,
     h("div", { className: "button-row" }, [h("div", { className: "search-box", style: { flex: "1 1 240px" } }, [search]), mine]),
     body,

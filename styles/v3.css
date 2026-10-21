@@ -79,6 +79,13 @@
 /* 搜尋 */
 .sticky-search { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 4px 0 8px; }
 .search-group h2 { font-size: 0.95rem; color: var(--muted); margin: 0; }
+.search-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.search-filters .other-areas { flex-basis: 100%; font-size: 0.9rem; }
+.search-filters .other-areas summary { cursor: pointer; color: var(--muted); }
+.search-filters [data-add-customer] { margin-left: auto; }
+.segmented { display: inline-flex; gap: 4px; padding: 3px; border-radius: 999px; background: color-mix(in srgb, var(--sec, var(--accent)) 12%, transparent); }
+.segmented .button { border-color: transparent; min-height: 32px; }
+.segmented [aria-selected="true"] { background: var(--sec, var(--accent)); color: var(--sec-on, #fff); }
 .result-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .result-rows li { border-bottom: 1px solid var(--line); }
 .result-rows li:last-child { border-bottom: 0; }

@@ -15,31 +15,37 @@ export const MORE_ITEMS = Object.freeze([
   { name: "plan", label: "客戶開發", icon: "➚" },
   { name: "kpi", label: "KPI", icon: "▤" },
   { name: "toolkit", label: "裝備庫", icon: "✦" },
-  { name: "dedupe", label: "資料整理", icon: "⧉" },
-  { name: "settings", label: "設定", icon: "⚙" },
+  { name: "settings", label: "設定與資料", icon: "⚙" },
 ]);
 
 // Pages that belong together share one entry and show tabs between them; old links keep working.
+// 案子 switches between its views from its own header, so it needs no tab strip.
 export const PAGE_GROUPS = Object.freeze([
   { name: "line-order", tabs: [["line-order", "LINE 訂單"], ["orders", "全部訂單與新購提醒"]] },
-  { name: "cases", tabs: [["cases", "要注意的案子"], ["tidy", "商機整理"], ["opportunities", "完整清單"]] },
-  { name: "plan", tabs: [["plan", "開發計畫"], ["costcheck", "成本健檢"], ["customers", "客戶探索"]] },
-  { name: "dedupe", tabs: [["dedupe", "整理同名客戶"], ["archive", "封存與復原"], ["data", "資料工具"]] },
-  { name: "settings", tabs: [["settings", "設定與外觀"], ["sync", "同步中心"], ["classic", "舊版畫面"]] },
+  { name: "plan", tabs: [["plan", "開發計畫"], ["costcheck", "成本健檢"]] },
+  { name: "settings", tabs: [["settings", "設定與外觀"], ["sync", "同步中心"], ["dedupe", "整理客戶"], ["archive", "封存與復原"], ["data", "資料工具"], ["classic", "舊版畫面"]] },
 ]);
 
 // Which main tab a page belongs to, so the bar stays lit on detail pages.
 const SECTION_OF = {
-  customer: "search", prep: "today", triage: "today", visit: "capture", case: "cases", opportunity: "cases",
+  customer: "search", customers: "search", prep: "today", triage: "today", visit: "capture",
+  case: "cases", opportunity: "cases", opportunities: "cases", tidy: "cases", merge: "settings",
   ...Object.fromEntries(PAGE_GROUPS.flatMap((group) => group.tabs.map(([page]) => [page, group.name]))),
 };
+
+// 案子 has three views; one switch in their headers instead of a tab strip.
+export function caseViews(current) {
+  return h("div", { className: "segmented", role: "tablist", dataset: { caseViews: "" } }, [["cases", "要處理"], ["opportunities", "全部清單"]].map(([page, label]) => h("a", {
+    href: `#/${page}`, className: "button small ghost", role: "tab", "aria-selected": String(page === current), dataset: { caseView: page }, text: label,
+  })));
+}
 
 // Each area has its own colour (styles/v3.css), so a glance tells where you are.
 const SECTION_COLOUR = {
   today: "today", triage: "today", prep: "today", capture: "today", visit: "today",
   "line-order": "orders", orders: "orders",
   cases: "cases", tidy: "cases", opportunities: "cases", case: "cases", opportunity: "cases",
-  plan: "develop", costcheck: "develop", customers: "develop",
+  plan: "develop", costcheck: "develop",
   kpi: "kpi",
 };
 

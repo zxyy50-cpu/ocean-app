@@ -33,7 +33,7 @@ export function renderTidy(ctx) {
 
   const mine = h("label", { className: "chip" }, [h("input", { type: "checkbox", checked: view.mineOnly, dataset: { tidyMineOnly: "" }, onChange: (event) => { view.mineOnly = event.target.checked; ctx.render(); } }), h("span", { text: "只看我的區域" })]);
   const percent = total ? Math.round((done / total) * 100) : 100;
-  const head = pageHeader("商機整理", "", [mine], {
+  const head = pageHeader("商機整理", "", [h("a", { className: "button small ghost", href: "#/cases", dataset: { tidyBack: "" }, text: "← 回案子" }), mine], {
     figure: `已整理 ${done} / ${total}`,
     note: `還剩 ${queue.length} 件${view.skipped.size ? `（跳過 ${view.skipped.size} 件）` : ""}`,
     progress: percent,

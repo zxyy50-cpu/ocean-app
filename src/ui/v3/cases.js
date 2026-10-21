@@ -9,6 +9,7 @@ import { OPEN_OPPORTUNITY_STAGES } from "../../data/schema.js";
 import { tidyQueue } from "../../data/tidy.js";
 import { badge, emptyState, field, formToObject, h, input, money, select, shortMoney, showErrors, toast } from "../dom.js";
 import { pageHeader } from "../shell.js";
+import { caseViews } from "./shell.js";
 import { registerPage } from "../app.js";
 import { changeStage, lostDialog, wonDialog } from "../pages/opportunity.js";
 import { openContactEditor } from "../forms/customer-forms.js";
@@ -60,8 +61,8 @@ export function renderCases(ctx) {
   const toTidy = tidyQueue(ctx.model, ctx.model.all, { today, areas: state.mineOnly ? ctx.settings.myAreas || [] : [] }).queue.length;
   return h("div", { className: "stack" }, [
     pageHeader("案子", "", [
+      caseViews("cases"),
       toTidy ? h("a", { className: "button primary", href: "#/tidy", dataset: { tidyEntry: "" }, text: `開始整理（${toTidy} 件待整理）` }) : null,
-      h("a", { className: "button ghost", href: "#/opportunities", text: "完整清單" }),
     ], {
       figure: `${pool.length} 件・${shortMoney(total)}`,
       note: `加權 ${shortMoney(pool.reduce((sum, opportunity) => sum + (Number(opportunity.amount) || 0) * (Number(opportunity.probability) || 0) / 100, 0))}・議價 ${pool.filter((item) => item.stage === "議價").length}・提案 ${pool.filter((item) => item.stage === "提案").length}・接觸 ${pool.filter((item) => item.stage === "接觸").length}`,
