@@ -2,7 +2,11 @@ import { toDateOnly } from "../../core/dates.js";
 import { requestId } from "../../core/ids.js";
 import { duplicateCandidates, restoreCustomer, setImportant } from "../../data/customers.js";
 import { holdInfo, releaseHold } from "../../data/devplan.js";
-import { customerIdentity } from "../../data/model.js";
+import { customerIdentity, primaryContact } from "../../data/model.js";
+import { customerBrief, mapsPlaceUrl } from "../../data/brief.js";
+import { loadReference } from "../../data/line-orders.js";
+import { openContactEditor } from "../forms/customer-forms.js";
+import { splitPhones } from "../pages/customer.js";
 import { opportunityTitle } from "../../data/products.js";
 import { badge, emptyState, h, money, toast } from "../dom.js";
 import { registerPage } from "../app.js";
@@ -70,6 +74,32 @@ function timeline(ctx, customer) {
   }));
 }
 
+// At the customer's door: four big buttons — call, directions, record, quote.
+function fieldButtons(ctx, customer) {
+  const contact = primaryContact(ctx.model, customer.id);
+  const number = [contact?.mobile, contact?.phone, customer.phone].flatMap(splitPhones)[0];
+  const big = (attrs, icon, label) => h(attrs.href ? "a" : "button", { ...attrs, className: `field-button${attrs.className ? ` ${attrs.className}` : ""}`, ...(attrs.href ? {} : { type: "button" }) }, [h("span", { className: "field-icon", "aria-hidden": "true", text: icon }), h("span", { text: label })]);
+  return h("div", { className: "field-buttons", dataset: { fieldButtons: "" } }, [
+    number ? big({ href: `tel:${number.replace(/[^\d+#]/g, "")}`, className: "is-primary", dataset: { fieldCall: "" } }, "☎", "撥號") : big({ dataset: { fieldCall: "" }, onClick: () => openContactEditor(ctx, customer.id) }, "☎", "補電話"),
+    big({ href: mapsPlaceUrl(customer), target: "_blank", rel: "noopener", dataset: { fieldMap: "" } }, "➤", "導航"),
+    big({ href: `#/capture?customer=${encodeURIComponent(customer.id)}`, dataset: { folderCapture: "" } }, "＋", "記錄"),
+    big({ href: `#/line-order?mode=quote&customer=${encodeURIComponent(customer.id)}`, dataset: { fieldQuote: "" } }, "$", "報價"),
+  ]);
+}
+
+// The 30-second summary; purchase history needs the order reference, so it fills in a moment later.
+function briefSlot(ctx, customer) {
+  const slot = h("dl", { className: "brief", dataset: { brief: "" } });
+  const draw = (reference) => {
+    const lines = customerBrief(ctx.model, reference, customer, ctx.today());
+    slot.replaceChildren(...lines.flatMap((line) => [h("dt", { text: line.label }), h("dd", { className: line.kind === "warn" ? "kpi-warn" : "" }, [line.href ? h("a", { href: line.href, text: line.text }) : line.text])]));
+    slot.hidden = !lines.length;
+  };
+  draw(null);
+  loadReference(ctx.db).then((loaded) => draw(loaded.reference)).catch(() => {});
+  return slot;
+}
+
 export function renderFolder(ctx, route) {
   const customer = ctx.model.customersById.get(route.id);
   if (!customer) return emptyState("找不到這位客戶", "可能已被合併。", h("a", { className: "button primary", href: "#/search", text: "搜尋客戶" }));
@@ -88,9 +118,10 @@ export function renderFolder(ctx, route) {
     customer.archivedAt ? h("div", { className: "warning-banner" }, [
       h("span", { text: `已封存：${customer.archiveReason || ""}` }),
       customer.mergedIntoId ? h("a", { href: "#/archive?view=merges", text: "到合併紀錄取消合併" }) : h("button", { type: "button", className: "small", text: "復原客戶", onClick: async () => { const result = await restoreCustomer(ctx.db, customer.id, requestId("restore")); toast(result.ok ? "已復原" : result.message || "復原失敗", { tone: result.ok ? "ok" : "error" }); } }),
-    ]) : h("div", { className: "button-row" }, [
-      h("a", { className: "button primary", href: `#/capture?customer=${encodeURIComponent(customer.id)}`, dataset: { folderCapture: "" }, text: "＋ 記錄" }),
-      h("a", { className: "button ghost", href: prepHref, dataset: { folderPrep: "" }, text: "拜訪前準備" }),
+    ]) : fieldButtons(ctx, customer),
+    customer.archivedAt ? null : briefSlot(ctx, customer),
+    customer.archivedAt ? null : h("div", { className: "button-row" }, [
+      h("a", { className: "button small ghost", href: prepHref, dataset: { folderPrep: "" }, text: "拜訪前準備" }),
       h("details", { className: "more-actions", dataset: { folderMore: "" } }, [
         h("summary", { className: "button ghost", "aria-label": "更多動作", text: "⋯" }),
         h("div", { className: "more-actions-menu" }, [

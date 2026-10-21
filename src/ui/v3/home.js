@@ -1,11 +1,11 @@
-import { formatShortDate, weekdayLabel } from "../../core/dates.js";
+import { addDays, formatShortDate, weekdayLabel } from "../../core/dates.js";
 import { requestId } from "../../core/ids.js";
 import { buildActions } from "../../data/actions.js";
 import { meetingReminders, weeklyReport } from "../../data/kpi-weekly.js";
 import { pageHeader } from "../shell.js";
 import { customerIdentity } from "../../data/model.js";
 import { completeReminder, snoozeReminder } from "../../data/reminders.js";
-import { badge, emptyState, h, shortMoney, toast } from "../dom.js";
+import { badge, emptyState, h, money, shortMoney, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { splitPhones } from "../pages/customer.js";
 
@@ -46,6 +46,19 @@ function actionCard(ctx, item, { visit = false } = {}) {
   ]);
 }
 
+// LINE orders from the last 14 days not yet handed to the secretary, newest first.
+// Older ones are mostly sheet imports whose blank status became 待確認; they stay on the LINE 訂單 page.
+function pendingOrders(ctx, today) {
+  const since = addDays(today, -14);
+  return (ctx.model.all.order || [])
+    .filter((order) => !order.archivedAt && order.source === "LINE" && order.status === "待確認" && String(order.orderDate || "") >= since)
+    .sort((a, b) => String(b.orderDate).localeCompare(String(a.orderDate)))
+    .map((order) => {
+      const items = ctx.model.itemsByOrder.get(order.id) || [];
+      return { order, items, total: items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0) };
+    });
+}
+
 function summary(data) {
   const dueToday = data.now.filter((item) => !item.late).length + data.schedule.length;
   const late = data.now.filter((item) => item.late).length + data.overdue.count;
@@ -74,22 +87,35 @@ export function renderHome(ctx) {
   head.querySelector(".page-header-main").append(h("small", { className: "page-note", dataset: { homeSummary: "" }, text: summary(data) }));
   const captureEntry = h("a", { className: "capture-entry", href: "#/capture", dataset: { captureEntry: "" } }, [h("span", { "aria-hidden": "true", text: "🎙" }), h("span", { text: "說說剛剛的拜訪…" })]);
 
+  // The cockpit: ① who to call or visit ② orders still waiting on me ③ KPI (in the header).
   const blocks = [];
-  if (data.now.length) blocks.push(h("section", { className: "home-block", dataset: { homeSection: "now" } }, [h("h2", { text: "現在該做" }), ...data.now.map((item) => actionCard(ctx, item))]));
-  if (data.schedule.length) blocks.push(h("section", { className: "home-block", dataset: { homeSection: "schedule" } }, [h("h2", { text: "今天要拜訪" }), ...data.schedule.map((item) => actionCard(ctx, item, { visit: true }))]));
-  // Information, not tasks: one quiet line each, details one tap away.
-  const firstBuys = data.signals.slice(0, 2).map((item) => ctx.model.customerName(ctx.model.ordersById.get(item.orderId)?.customerId) || item.customerNo).filter(Boolean);
   const meeting = meetingReminders(ctx.model, ctx.model.all, today);
-  const lines = [
-    data.signalCount ? h("a", { className: "summary-line", href: "#/orders?view=signals", dataset: { homeSection: "signals" } }, [h("span", { text: `新購提醒 ${data.signalCount} 件${firstBuys.length ? `（${firstBuys.join("、")}${data.signalCount > firstBuys.length ? "…" : ""}）` : ""}` }), h("span", { text: "看全部 →" })]) : null,
-    meeting ? h("a", { className: "summary-line warn", href: "#/kpi?view=weekly", dataset: { kpiReminder: "" } }, [
+  if (meeting) {
+    blocks.push(h("a", { className: "summary-line warn", href: "#/kpi?view=weekly", dataset: { kpiReminder: "" } }, [
       h("span", { text: `${meeting.daysLeft ? "明天" : "今天"}週會：${[meeting.missingWeek ? "本週 KPI 金額還沒填" : "", meeting.stale.length ? `主管關注 ${meeting.stale.length} 案還沒更新（${meeting.stale.slice(0, 2).map((row) => row.opportunity.name).join("、")}${meeting.stale.length > 2 ? "…" : ""}）` : ""].filter(Boolean).join("；")}` }),
       h("span", { text: "去更新 →" }),
-    ]) : null,
-    data.overdue.count ? h("a", { className: "summary-line warn", href: "#/triage", dataset: { overdueLine: "" } }, [h("span", { text: `逾期 ${data.overdue.count} 件` }), h("span", { text: "一次整理 →" })]) : null,
-    data.redCases ? h("a", { className: "summary-line", href: "#/cases", dataset: { redCaseLine: "" } }, [h("span", { text: `${data.redCases} 個提案／議價的案子有紅燈` }), h("span", { text: "看案子 →" })]) : null,
+    ]));
+  }
+  if (data.now.length) blocks.push(h("section", { className: "home-block", dataset: { homeSection: "now" } }, [h("h2", { text: "① 要聯絡" }), ...data.now.map((item) => actionCard(ctx, item))]));
+  if (data.schedule.length) blocks.push(h("section", { className: "home-block", dataset: { homeSection: "schedule" } }, [h("h2", { text: "① 今天要拜訪" }), ...data.schedule.map((item) => actionCard(ctx, item, { visit: true }))]));
+  const pending = pendingOrders(ctx, today);
+  if (pending.length) {
+    blocks.push(h("section", { className: "home-block", dataset: { homeSection: "orders" } }, [
+      h("h2", { text: `② 待處理訂單（${pending.length}）` }),
+      ...pending.slice(0, 3).map(({ order, items, total }) => h("a", { className: "action-card compact", href: "#/line-order", dataset: { pendingOrder: order.id } }, [h("div", { className: "action-main" }, [
+        h("strong", { text: order.customerName || ctx.model.customerName(order.customerId) || "（客戶待確認）" }),
+        h("span", { text: `${order.orderDate || ""}・${items.length} 項${total ? `・${money(total)}` : ""}・${order.status}，還沒給秘書` }),
+      ])])),
+      pending.length > 3 ? h("a", { className: "more-link", href: "#/line-order", text: `還有 ${pending.length - 3} 張 →` }) : null,
+    ]));
+  }
+  // Everything else is information, not a task: one row of links.
+  const others = [
+    data.signalCount ? h("a", { href: "#/orders?view=signals", dataset: { homeSection: "signals" }, text: `新購提醒 ${data.signalCount}` }) : null,
+    data.overdue.count ? h("a", { href: "#/triage", dataset: { overdueLine: "" }, text: `逾期 ${data.overdue.count}` }) : null,
+    data.redCases ? h("a", { href: "#/cases", dataset: { redCaseLine: "" }, text: `紅燈案子 ${data.redCases}` }) : null,
   ].filter(Boolean);
-  if (lines.length) blocks.push(h("section", { className: "home-block" }, lines));
+  if (others.length) blocks.push(h("div", { className: "home-others", dataset: { homeOthers: "" } }, [h("span", { className: "muted", text: "其他：" }), ...others.flatMap((link, index) => (index ? [h("span", { className: "muted", text: "・" }), link] : [link]))]));
   if (!blocks.length) {
     blocks.push(emptyState(
       hasCustomers ? "今天的事都做完了" : "還沒有客戶資料",

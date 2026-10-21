@@ -15,6 +15,11 @@ export function queueQuoteCode(code) {
   if (code) quote.pending = code;
 }
 
+// From a customer page: quote for this customer (their last prices show up next to each product).
+export function queueQuoteCustomer(customer) {
+  if (customer && quote.customer?.customerId !== customer.id) quote.customer = { customerNo: customer.customerNo || "", company: customer.name, customerId: customer.id, contact: "" };
+}
+
 function priceText(value, unit) {
   return value === null || value === undefined ? "定價未填" : `${money(value)}${unit ? `／${unit}` : ""}`;
 }

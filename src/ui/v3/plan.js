@@ -1,6 +1,7 @@
 import { formatShortDate } from "../../core/dates.js";
 import { priorityList, zoneFunnel } from "../../data/devplan.js";
 import { GROUP_NAMES } from "../../data/industry-groups.js";
+import { mapsRouteUrl, routeOrder } from "../../data/brief.js";
 import { badge, emptyState, h } from "../dom.js";
 import { registerPage } from "../app.js";
 import { pageHeader } from "../shell.js";
@@ -57,10 +58,13 @@ function listView(ctx, areas) {
   const selected = new Set();
   const bar = h("div", { className: "plan-bulk", dataset: { planBulk: "" } });
   const refreshBar = () => {
+    const picked = [...selected].map((id) => ctx.model.customersById.get(id)).filter(Boolean);
     bar.replaceChildren(...(selected.size ? [
       h("span", { text: `已選 ${selected.size} 家` }),
+      // Up to 10 stops: Google Maps takes the route from where you are, in a rough township/road order.
+      picked.length >= 1 && picked.length <= 10 ? h("a", { className: "button small primary", href: mapsRouteUrl(routeOrder(picked)), target: "_blank", rel: "noopener", dataset: { planRoute: "" }, text: `➤ 開路線（${picked.length} 家）` }) : h("small", { className: "muted", text: "開路線最多 10 家" }),
       h("button", { type: "button", className: "small ghost", text: "取消選取", onClick: () => { selected.clear(); document.querySelectorAll("[data-plan-pick]").forEach((node) => { node.checked = false; }); refreshBar(); } }),
-      h("button", { type: "button", className: "small primary", dataset: { planHoldSelected: "" }, text: "標為不開發", onClick: () => openHoldDialog(ctx, [...selected].map((id) => ctx.model.customersById.get(id)).filter(Boolean), { onDone: () => ctx.render() }) }),
+      h("button", { type: "button", className: "small ghost", dataset: { planHoldSelected: "" }, text: "標為不開發", onClick: () => openHoldDialog(ctx, [...selected].map((id) => ctx.model.customersById.get(id)).filter(Boolean), { onDone: () => ctx.render() }) }),
     ] : []));
     bar.hidden = !selected.size;
   };
@@ -86,7 +90,7 @@ function listView(ctx, areas) {
       chip("只看規模小", state.smallOnly, { planSmall: "" }, (value) => { state.smallOnly = value; state.limit = PAGE; ctx.render(); }),
       selectSmall,
     ]),
-    h("p", { className: "muted", dataset: { planCount: "" }, text: `${items.length} 家可開發（A ${items.filter((item) => item.grade === "A").length}・B ${items.filter((item) => item.grade === "B").length}・C ${items.filter((item) => item.grade === "C").length}），A 級在前。` }),
+    h("p", { className: "muted", dataset: { planCount: "" }, text: `${items.length} 家可開發（A ${items.filter((item) => item.grade === "A").length}・B ${items.filter((item) => item.grade === "B").length}・C ${items.filter((item) => item.grade === "C").length}），A 級在前。勾選幾家可以開 Google 地圖路線。` }),
     bar,
     shown.length ? h("ul", { className: "plan-list" }, shown.map((item) => prospectCard(ctx, item, selected, refreshBar))) : h("section", { className: "card" }, [emptyState("這個條件下沒有要開發的客戶", "換個區域，或取消「只看未接觸」。")]),
     items.length > state.limit ? h("button", { type: "button", className: "ghost", text: `顯示更多（還有 ${items.length - state.limit} 家）`, onClick: () => { state.limit += PAGE; ctx.render(); } }) : null,

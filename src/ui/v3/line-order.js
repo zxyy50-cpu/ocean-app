@@ -10,7 +10,7 @@ import {
   orderTaxByCustomer, rememberTax, savedOrderRows, savedSalutations, setLineOrderStatus, sheetState, writeOrderToSheet,
 } from "../../data/line-orders.js";
 import { badge, confirmDialog, emptyState, h, money, toast } from "../dom.js";
-import { drawQuote, queueQuoteCode, resetQuoteState } from "./quote-panel.js";
+import { drawQuote, queueQuoteCode, queueQuoteCustomer, resetQuoteState } from "./quote-panel.js";
 import { registerPage } from "../app.js";
 import { pageHeader } from "../shell.js";
 
@@ -56,7 +56,11 @@ function checkList(checks) {
 export function renderLineOrder(ctx, route) {
   const today = ctx.today();
   if (route?.query?.get("mode") === "reorder") state.mode = "reorder";
-  if (route?.query?.get("mode") === "quote") { state.mode = "quote"; queueQuoteCode(route.query.get("code")); }
+  if (route?.query?.get("mode") === "quote") {
+    state.mode = "quote";
+    queueQuoteCode(route.query.get("code"));
+    if (route.query.get("customer")) queueQuoteCustomer(ctx.model.customersById.get(route.query.get("customer")));
+  }
   const quoteBox = h("div", { className: "stack", dataset: { quote: "" } });
   const drawQuoteBox = () => { if (state.mode === "quote") drawQuote(quoteBox, { ctx, reference }); };
   const refInfo = h("p", { className: "muted", dataset: { lineReference: "" }, text: "讀取商品與購買紀錄…" });
