@@ -17,11 +17,11 @@ import { pageHeader } from "../shell.js";
 // LINE 訂單: paste a LINE message (or a screenshot) → a checked draft → secretary / customer texts
 // → saved in the app and written to LINE訂單整理. Nothing is written until the user presses save.
 const DRAFT_META = "lineOrderDraft";
-const state = { text: "", draft: null, saved: null, sheet: "test", restored: false, mode: "message", reorder: { customer: null, picks: {}, showAll: false, extra: [] } };
+const state = { text: "", draft: null, saved: null, restored: false, mode: "message", reorder: { customer: null, picks: {}, showAll: false, extra: [] } };
 let reference = emptyReference();
 
 export function resetLineOrderState() {
-  Object.assign(state, { text: "", draft: null, saved: null, sheet: "test", restored: false, mode: "message", reorder: { customer: null, picks: {}, showAll: false, extra: [] } });
+  Object.assign(state, { text: "", draft: null, saved: null, restored: false, mode: "message", reorder: { customer: null, picks: {}, showAll: false, extra: [] } });
   reference = emptyReference();
   resetQuoteState();
 }
@@ -38,7 +38,7 @@ function draftKey() {
   }
 }
 
-const persist = (ctx) => ctx.db.setMeta(draftKey(), { text: state.text, draft: state.draft, saved: state.saved, sheet: state.sheet }).catch(() => {});
+const persist = (ctx) => ctx.db.setMeta(draftKey(), { text: state.text, draft: state.draft, saved: state.saved }).catch(() => {});
 
 function copyButton(getText, label) {
   return h("button", { type: "button", className: "small ghost", text: `複製${label}`, onClick: async (event) => {
@@ -245,7 +245,7 @@ export function renderLineOrder(ctx, route) {
   async function save() {
     const draft = state.draft;
     const pending = pendingChecks(draft);
-    const sheet = LINE_SHEETS[state.sheet];
+    const sheet = LINE_SHEETS.live;
     const ok = await confirmDialog({
       title: `儲存並寫入「${sheet}」？`,
       body: [
@@ -272,10 +272,6 @@ export function renderLineOrder(ctx, route) {
   function drawDraft() {
     const draft = state.draft;
     if (!draft) { draftBox.replaceChildren(); return; }
-    const sheetChoice = h("div", { className: "chip-group", role: "radiogroup", dataset: { lineSheetChoice: "" } }, Object.entries(LINE_SHEETS).map(([key, name]) => h("label", { className: "chip" }, [
-      h("input", { type: "radio", name: "lineSheet", value: key, checked: state.sheet === key, onChange: () => { state.sheet = key; persist(ctx); } }),
-      h("span", { text: key === "test" ? `測試：${name}` : `正式：${name}` }),
-    ])));
     const pending = pendingChecks(draft);
     draftBox.replaceChildren(...[
       state.saved ? h("div", { className: state.saved.written ? "info-banner" : "warning-banner", dataset: { lineSavedBanner: "" } }, [
@@ -290,9 +286,8 @@ export function renderLineOrder(ctx, route) {
       orderCard(draft),
       outputs(draft),
       state.saved ? null : h("section", { className: "card stack" }, [
-        h("strong", { text: "寫入哪個分頁" }), sheetChoice,
         h("button", { type: "button", className: "primary", dataset: { lineSave: "" }, text: "儲存並寫入試算表", onClick: save }),
-        h("small", { className: "muted", text: "會先存在 App（訂單中心看得到），再寫入試算表；離線時之後可以再補寫。" }),
+        h("small", { className: "muted", text: `會先存在 App（訂單中心看得到），再寫入「${LINE_SHEETS.live}」；離線時之後可以再補寫。` }),
       ]),
     ].filter(Boolean));
   }
@@ -319,7 +314,7 @@ export function renderLineOrder(ctx, route) {
         badge(order.status, order.status === "待確認" ? "warn" : "ok"),
         h("div", { className: "row-actions" }, [
           sheet.written ? null : h("button", { type: "button", className: "small ghost", text: "寫入試算表", onClick: async () => {
-            const result = await writeOrderToSheet(ctx.db, ctx.transport, { order, rows: savedOrderRows(ctx.model, order), sheet: LINE_SHEETS[state.sheet] }, requestId("line-sheet-retry"));
+            const result = await writeOrderToSheet(ctx.db, ctx.transport, { order, rows: savedOrderRows(ctx.model, order), sheet: LINE_SHEETS.live }, requestId("line-sheet-retry"));
             toast(result.ok ? "已寫入" : result.message, { tone: result.ok ? "ok" : "error" });
             ctx.rebuild(); drawSaved();
           } }),
@@ -358,7 +353,7 @@ export function renderLineOrder(ctx, route) {
       state.restored = true;
       // This tab's own draft; a draft saved before per-tab drafts existed is picked up once.
       const stored = (await ctx.db.getMeta(draftKey(), null)) || (await ctx.db.getMeta(DRAFT_META, null));
-      if (stored && !state.text && !state.draft) { Object.assign(state, { text: stored.text || "", draft: stored.draft || null, saved: stored.saved || null, sheet: stored.sheet || "test" }); text.value = state.text; }
+      if (stored && !state.text && !state.draft) { Object.assign(state, { text: stored.text || "", draft: stored.draft || null, saved: stored.saved || null }); text.value = state.text; }
     }
     drawDraft();
     drawReorder();
