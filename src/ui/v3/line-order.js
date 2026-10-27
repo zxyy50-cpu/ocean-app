@@ -64,7 +64,7 @@ export function renderLineOrder(ctx, route) {
   const quoteBox = h("div", { className: "stack", dataset: { quote: "" } });
   const drawQuoteBox = () => { if (state.mode === "quote") drawQuote(quoteBox, { ctx, reference }); };
   const refInfo = h("p", { className: "muted", dataset: { lineReference: "" }, text: "讀取商品與購買紀錄…" });
-  const text = h("textarea", { rows: 6, value: state.text, dataset: { lineText: "" }, "aria-label": "LINE 訂購訊息", placeholder: "貼上客戶的 LINE 訊息，例如：\n興農 楊津銘：我要 1罐PDA、1罐LBA，然後要一罐macconkey，貨號211387；單獨一張發票。" });
+  const text = h("textarea", { rows: 6, value: state.text, dataset: { lineText: "" }, "aria-label": "LINE 訂購訊息", placeholder: "貼上客戶的 LINE 訊息，或直接貼上截圖（Ctrl+V），例如：\n興農 楊津銘：我要 1罐PDA、1罐LBA，然後要一罐macconkey，貨號211387；單獨一張發票。" });
   const status = h("p", { className: "muted", role: "status", dataset: { lineStatus: "" } });
   const draftBox = h("div", { className: "stack", dataset: { lineDraft: "" } });
   const savedBox = h("section", { className: "card", dataset: { lineSaved: "" } });
@@ -112,6 +112,25 @@ export function renderLineOrder(ctx, route) {
     imageInput.value = "";
     if (file) await readImage(file);
   } });
+  // A screenshot pasted straight into the message box (Ctrl+V / long-press 貼上) is read like an uploaded one.
+  text.addEventListener("paste", (event) => {
+    const file = [...(event.clipboardData?.items || [])].find((item) => item.kind === "file" && item.type.startsWith("image/"))?.getAsFile();
+    if (!file) return;
+    event.preventDefault();
+    readImage(file);
+  });
+  // The button reads the clipboard directly, for when the box isn't focused or the phone offers no paste menu.
+  const pasteImage = async () => {
+    try {
+      for (const item of await navigator.clipboard.read()) {
+        const type = item.types.find((name) => name.startsWith("image/"));
+        if (type) { await readImage(new File([await item.getType(type)], "screenshot.png", { type })); return; }
+      }
+      status.textContent = "剪貼簿裡沒有圖片。先截圖或在 LINE 長按圖片「複製」，再按一次。";
+    } catch {
+      status.textContent = "這個瀏覽器不讓 App 直接讀剪貼簿：請點一下上面的文字框，按 Ctrl+V（手機長按「貼上」）。";
+    }
+  };
 
   function customerCard(draft) {
     const customer = draft.customer;
@@ -478,6 +497,7 @@ export function renderLineOrder(ctx, route) {
       text,
       h("div", { className: "button-row" }, [
         h("button", { type: "button", className: "primary", dataset: { lineParse: "" }, text: "辨識訂單", onClick: parse }),
+        h("button", { type: "button", className: "ghost", dataset: { linePasteImage: "" }, text: "貼上截圖", onClick: pasteImage }),
         h("button", { type: "button", className: "ghost", dataset: { lineScreenshot: "" }, text: "上傳截圖", onClick: () => imageInput.click() }),
         imageInput,
       ]),
