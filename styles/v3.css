@@ -315,3 +315,50 @@ details.card[open] > summary { margin-bottom: 12px; }
   .kpi-list > li { flex-wrap: wrap; }
   .kpi-row-side { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; width: 100%; text-align: left; padding-left: 0; }
 }
+
+/* 週會一頁 (KPI → 週會一頁): four numbered sections, big enough to read over a Teams share. */
+.meet-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.meet-bar h2 { margin: 0; font-size: 1.3rem; }
+.meet-section { display: flex; flex-direction: column; gap: 12px; }
+.meet-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.meet-head h2 { margin: 0; font-size: 1.25rem; }
+.meet-number { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--sec, var(--accent)); color: var(--sec-on, #fff); font-weight: 800; font-size: 1.05rem; align-self: center; }
+.meet-goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.meet-goal { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--line); border-top: 5px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.meet-goal.light-green { border-top-color: var(--ok); }
+.meet-goal.light-yellow { border-top-color: #d9a400; }
+.meet-goal.light-red { border-top-color: var(--danger); }
+.meet-goal-top { display: flex; justify-content: space-between; gap: 8px; }
+.meet-big { font-size: 2.2rem; font-weight: 800; line-height: 1.1; }
+.meet-note { margin: 4px 0 0; font-size: 0.9rem; color: var(--muted); }
+.meet-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.meet-figure { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--sec-soft, var(--surface-2)); }
+.meet-figure strong { font-size: 1.6rem; line-height: 1.2; }
+.meet-cases, .meet-asks, .meet-plan { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.meet-cases li { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 2fr) auto; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 1rem; }
+.meet-cases li:last-child, .meet-plan li:last-child { border-bottom: 0; }
+.meet-change { color: var(--muted); }
+.meet-asks { gap: 12px; }
+.meet-ask { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-left: 4px solid var(--danger); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--danger-soft, var(--surface-2)); }
+.meet-ask-head { display: flex; justify-content: space-between; gap: 10px; }
+.meet-ask-input { display: flex; gap: 8px; }
+.meet-ask-input input { flex: 1; min-width: 0; font-size: 1rem; }
+.meet-check { margin: 0; font-weight: 700; }
+.meet-plan li { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) minmax(0, 2fr); gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.meet-date { font-weight: 700; color: var(--sec-ink, var(--accent)); }
+@media (max-width: 640px) {
+  .meet-cases li, .meet-plan li { grid-template-columns: 1fr auto; }
+  .meet-change, .meet-plan li > span:last-child { grid-column: 1 / -1; }
+  .meet-ask-input { flex-wrap: wrap; }
+}
+
+/* 簡報模式: only the report, larger, for sharing the window on Teams. Esc or the button ends it. */
+:root[data-present] .sidebar, :root[data-present] .topbar, :root[data-present] .bottom-nav,
+:root[data-present] .group-tab-slot, :root[data-present] .signin-slot, :root[data-present] [data-kpi-view],
+:root[data-present] .skin-decor, :root[data-present] .skin-decor-front { display: none !important; }
+:root[data-present] .shell { display: block; }
+:root[data-present] .page { max-width: 1280px; padding: 24px 32px; font-size: 1.08rem; }
+:root[data-present] .meet-hide { display: none; }
+.meet-present .when-on, :root[data-present] .meet-present .when-off { display: none; }
+:root[data-present] .meet-present .when-on { display: inline; }
+:root[data-present] .meet-present { background: transparent; color: var(--ink); border: 1px solid var(--line); }

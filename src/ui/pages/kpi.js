@@ -4,12 +4,17 @@ import { badge, emptyState, h, money, shortMoney } from "../dom.js";
 import { registerPage } from "../app.js";
 import { pageHeader } from "../shell.js";
 import { weeklySection } from "./kpi-weekly.js";
+import { meetingSection, setPresenting } from "./kpi-meeting.js";
 import { weeklyReport } from "../../data/kpi-weekly.js";
 
-const state = { period: "month", mineOnly: false, view: "weekly" };
+const state = { period: "month", mineOnly: false, view: "meeting" };
+
+export function resetKpiState() {
+  Object.assign(state, { period: "month", mineOnly: false, view: "meeting" });
+}
 
 function viewTabs(ctx) {
-  return h("nav", { className: "tabs", dataset: { kpiView: "" } }, [["weekly", "週會報告"], ["stats", "行動統計"]].map(([value, label]) => h("a", {
+  return h("nav", { className: "tabs", dataset: { kpiView: "" } }, [["meeting", "週會一頁"], ["weekly", "業績與商機"], ["stats", "行動統計"]].map(([value, label]) => h("a", {
     href: `#/kpi?view=${value}`, className: "button small ghost", "aria-current": state.view === value ? "page" : null, "aria-selected": String(state.view === value), dataset: { kpiViewTab: value }, text: label,
   })));
 }
@@ -21,7 +26,13 @@ function bar(value, max, label) {
 
 export function renderKpi(ctx, route) {
   const asked = route?.query?.get?.("view");
-  if (asked === "weekly" || asked === "stats") state.view = asked;
+  if (["meeting", "weekly", "stats"].includes(asked)) state.view = asked;
+  if (state.view !== "meeting") setPresenting(false);
+  if (state.view === "meeting") {
+    const page = meetingSection(ctx);
+    page.firstChild.after(viewTabs(ctx));
+    return page;
+  }
   if (state.view === "weekly") {
     const report = weeklyReport(ctx.model, ctx.model.all, ctx.today());
     const main = report.latest ? report.goals[0] : null;
@@ -29,7 +40,7 @@ export function renderKpi(ctx, route) {
       figure: main ? `${main.label.split(" ")[0]} 達成 ${main.percent}%` : "本週還沒填業績",
       note: main ? `${main.behindPace >= 0 ? "超前" : "落後"}應有進度 ${shortMoney(Math.abs(main.behindPace))}・預估全年 ${shortMoney(main.projected)}` : "",
       progress: main ? main.percent : null,
-      help: "每週更新三項業績，週會直接用這頁報告。",
+      help: "每週在這裡更新三項業績與商機；週會用「週會一頁」報告。",
     }), viewTabs(ctx), weeklySection(ctx)]);
   }
   const today = ctx.today();
