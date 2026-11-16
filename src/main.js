@@ -1,7 +1,6 @@
 import { createDatabase, createIndexedDbAdapter } from "./data/db.js";
 import { connectSync, loadSyncConfig } from "./sync/setup.js";
 import { createApp } from "./ui/app.js";
-import { toast } from "./ui/dom.js";
 import { v3Shell } from "./ui/v3/shell.js";
 import "./ui/pages/today.js";
 import "./ui/pages/settings.js";
@@ -35,7 +34,6 @@ import "./ui/v3/triage.js";
 import "./ui/v3/appearance.js";
 import "./ui/v3/plan.js";
 import "./ui/v3/line-order.js";
-import "./ui/v3/contact-fill.js";
 
 async function start() {
   const root = document.getElementById("app");
@@ -45,8 +43,7 @@ async function start() {
     const app = createApp({ db, root, shell: v3Shell, homePage: "today" });
     globalThis.oceanApp = app;
     const config = await loadSyncConfig(db);
-    // A failed start used to vanish silently and the APP just never synced; say so.
-    if (config) connectSync(app, config).catch((error) => toast(`同步沒有啟動：${error?.message || error}（到設定 → 同步連線，按「測試連線」看原因）`, { tone: "error", timeout: 15000 }));
+    if (config) connectSync(app, config).catch(() => {});
   } catch (error) {
     root.textContent = "";
     const message = document.createElement("p");
