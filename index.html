@@ -16,8 +16,16 @@
   </script>
 </head>
 <body>
-  <div id="app"><p style="padding:24px">載入中…</p></div>
+  <div id="app"><p style="padding:24px" data-boot>載入中…</p></div>
   <noscript>這個 APP 需要啟用 JavaScript。</noscript>
+  <script>
+    // A file that failed to download stops the APP silently on 「載入中…」; say so and offer a reload.
+    setTimeout(function () {
+      var boot = document.querySelector("[data-boot]");
+      if (!boot) return;
+      boot.innerHTML = "APP 沒有載入完成（可能有檔案沒下載到）。<br>電腦版請確認已用「啟動-Ocean業務助理」開啟，再按下方重新載入。<br><br><button type=\"button\" onclick=\"location.reload()\">重新載入</button>";
+    }, 15000);
+  </script>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>
