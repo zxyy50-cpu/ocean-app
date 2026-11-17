@@ -19,7 +19,7 @@ export function quoteProduct(reference, code) {
   const product = reference.products.get(code);
   if (product) {
     const list = product.listPrice ? { listPrice: product.listPrice, listSource: "" } : historyListPrice(reference, code);
-    return { code, name: product.name, nameZh: product.nameZh, spec: product.spec, unit: product.unit, brand: product.brand, ...list, discontinued: /停產/.test(product.spec) };
+    return { code, name: product.name, nameZh: product.nameZh, spec: product.spec, unit: product.unit, brand: product.brand, ...list, erpListDate: product.erpListDate || "", catalogListPrice: product.catalogListPrice ?? null, catalogUnit: product.catalogUnit || "", discontinued: /停產/.test(product.spec) };
   }
   // Bought before but missing from the catalog: what the history knows.
   const entry = reference.history.find((item) => item.code === code);
@@ -28,14 +28,19 @@ export function quoteProduct(reference, code) {
 
 // 商品清單's 未稅定價 is sometimes wrong (DIF218661: 13,700 per SET while every deal is about 3,400
 // a bottle). It is checked against the ERP 訂價 on shipments and against recent deals; a doubt says
-// why and, when the ERP has a price, which one to quote instead.
+// why and, when the ERP has a price, which one to quote instead. The reference already uses the ERP
+// 訂價 as listPrice, so on screen only products without one are checked; { catalog: true } checks
+// 商品清單's own price, for the list sent back to whoever keeps it.
 const ntd = (value) => `NT$ ${Number(value).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 const slashDate = (value) => String(value || "").replaceAll("-", "/");
 
-export function listPriceDoubt(reference, code) {
+export function listPriceDoubt(reference, code, { catalog = false } = {}) {
   const product = reference.products.get(code);
-  if (!product?.listPrice) return null;
-  const list = product.listPrice;
+  // On screen the ERP 訂價 is trusted as is.
+  if (!product || (!catalog && product.erpListDate)) return null;
+  const list = product.erpListDate ? product.catalogListPrice : product.listPrice;
+  if (!list) return null;
+  const unit = product.erpListDate ? product.catalogUnit : product.unit;
   // reference.history is newest first.
   const entries = reference.history.filter((item) => item.code === code);
   const reasons = [];
@@ -51,15 +56,15 @@ export function listPriceDoubt(reference, code) {
   }
   if (!reasons.length) return null;
   const specUnit = (String(product.spec || "").match(/\/\s*([A-Za-z]+)\s*$/) || [])[1];
-  if (specUnit && product.unit && specUnit.toUpperCase() !== product.unit.toUpperCase()) reasons.push(`規格是每 ${specUnit}，銷售單位卻是 ${product.unit}`);
-  return { code, listPrice: list, unit: product.unit, reasons, suggested: erpDiffers ? { price: erp.listPrice, source: `ERP 訂價（${slashDate(erp.date)}）` } : null };
+  if (specUnit && unit && specUnit.toUpperCase() !== unit.toUpperCase()) reasons.push(`規格是每 ${specUnit}，銷售單位卻是 ${unit}`);
+  return { code, listPrice: list, unit, reasons, suggested: erpDiffers ? { price: erp.listPrice, source: `ERP 訂價（${slashDate(erp.date)}）` } : null };
 }
 
 // Every doubtful list price, the furthest off first, to send back to whoever keeps 商品清單.
 export function listPriceDoubts(reference) {
   const doubts = [];
   for (const product of reference.productList) {
-    const doubt = listPriceDoubt(reference, product.code);
+    const doubt = listPriceDoubt(reference, product.code, { catalog: true });
     if (doubt) doubts.push({ ...doubt, name: product.name, spec: product.spec });
   }
   const off = (doubt) => { const other = doubt.suggested?.price; return other ? Math.abs(Math.log(doubt.listPrice / other)) : 0; };

@@ -92,6 +92,14 @@ export function normalizeReference(raw = {}) {
     }
   }
   history.sort((left, right) => String(right.date).localeCompare(String(left.date)) || (left.source === "出貨" ? -1 : 1));
+  // The ERP 訂價 on the latest shipment is the right list price (商品清單's 未稅定價 is often stale
+  // or for another unit: 9,800 per CTN while the ERP sells it at 7,000 per SET). It replaces the
+  // catalog price and unit; the catalog's own stays as catalogListPrice / catalogUnit.
+  for (const entry of history) {
+    const product = entry.source === "出貨" && entry.listPrice ? products.get(entry.code) : null;
+    if (!product || product.erpListDate) continue;
+    Object.assign(product, { catalogListPrice: product.listPrice, catalogUnit: product.unit, listPrice: entry.listPrice, unit: entry.unit || product.unit, erpListDate: entry.date });
+  }
   const byCustomerCode = new Map();
   for (const entry of history) {
     const key = `${entry.customerNo}|${entry.code}`;

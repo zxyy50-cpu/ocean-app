@@ -29,6 +29,16 @@ function doubtNote(doubt) {
   ]);
 }
 
+// 「ERP 訂價（2026/04/01）」, and the 商品清單 price it replaced when that one differs.
+function priceOrigin(product) {
+  if (product.erpListDate) {
+    const old = product.catalogListPrice;
+    const differs = old && (old !== product.listPrice || (product.catalogUnit || "") !== (product.unit || ""));
+    return `・ERP 訂價（${String(product.erpListDate).replaceAll("-", "/")}）${differs ? `，商品清單寫 ${priceText(old, product.catalogUnit)}` : ""}`;
+  }
+  return product.listSource ? `・商品清單沒填，取自${product.listSource}` : "";
+}
+
 function priceText(value, unit) {
   return value === null || value === undefined ? "定價未填" : `${money(value)}${unit ? `／${unit}` : ""}`;
 }
@@ -75,7 +85,7 @@ export function drawQuote(box, { ctx, reference }) {
           h("strong", { text: `${product.code}｜${product.name}` }),
           product.nameZh ? h("small", { text: product.nameZh }) : null,
           h("small", { className: "muted", text: [product.spec, product.brand].filter(Boolean).join("・") }),
-          h("span", { className: "quote-list-price", dataset: { quoteListPrice: product.code }, text: `定價 ${priceText(product.listPrice, product.unit)}（未稅）${product.listSource ? `・商品清單沒填，取自${product.listSource}` : ""}` }),
+          h("span", { className: "quote-list-price", dataset: { quoteListPrice: product.code }, text: `定價 ${priceText(product.listPrice, product.unit)}（未稅）${priceOrigin(product)}` }),
           mine ? h("small", { className: "quote-deal-mine", text: `這位客戶上次 ${money(mine.unitPrice)}（${String(mine.date).replaceAll("-", "/")}）` }) : null,
           deals.length ? h("small", { className: "muted", text: `最近成交：${deals.map((deal) => `${deal.customerName} ${money(deal.unitPrice)}（${String(deal.date).slice(0, 7).replace("-", "/")}）`).join("、")}` }) : null,
           doubtNote(listPriceDoubt(reference, product.code)),
@@ -99,7 +109,7 @@ export function drawQuote(box, { ctx, reference }) {
       h("div", { className: "quote-main" }, [
         h("strong", { text: `${item.code}｜${item.name}` }),
         h("small", { className: "muted", text: item.spec }),
-        h("small", { text: `定價 ${priceText(item.listPrice, item.unit)}` }),
+        h("small", { text: `定價 ${priceText(item.listPrice, item.unit)}${priceOrigin(item)}` }),
         doubtNote(listPriceDoubt(reference, item.code)),
       ]),
       h("label", { className: "quote-price" }, [h("span", { text: "報價 $" }), h("input", {
@@ -123,7 +133,7 @@ export function drawQuote(box, { ctx, reference }) {
       h("h2", { text: `商品清單定價可疑（${doubts.length} 項）` }),
       h("button", { type: "button", className: "small ghost", dataset: { quoteDoubtsToggle: "" }, text: quote.showDoubts ? "收起" : "列出來", onClick: () => { quote.showDoubts = !quote.showDoubts; redraw(); } }),
     ]),
-    h("small", { className: "muted", text: "和 ERP 出貨的訂價差超過一成，或是最近成交價的兩倍以上／一半以下。報價時這些不會直接帶入商品清單的定價。" }),
+    h("small", { className: "muted", text: "商品清單的定價和 ERP 出貨的訂價差超過一成，或是最近成交價的兩倍以上／一半以下。APP 已經改用 ERP 訂價；這份清單可以給維護商品清單的人修正。" }),
     ...(quote.showDoubts ? [
       h("pre", { className: "line-output", dataset: { quoteDoubtsText: "" }, text: listPriceDoubtText(doubts) }),
       h("div", { className: "button-row" }, [h("button", { type: "button", className: "primary", text: "複製清單（給維護商品清單的人）", onClick: async (event) => {
