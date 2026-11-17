@@ -55,6 +55,12 @@ export function customerInAreas(customer, areas = []) {
   return (customer.areaTags || []).some((tag) => areaFamily(tag).some((area) => wanted.has(comparisonKey(area))));
 }
 
+// A group of records is 「mine」 when one is in my areas, or none has an area at all (an untagged
+// customer counts as mine everywhere else too, e.g. 今天 and 整理).
+export function groupInMyAreas(members, areas = []) {
+  return members.some((customer) => customerInAreas(customer, areas)) || members.every((customer) => !(customer.areaTags || []).length);
+}
+
 export function partitionByMyAreas(customers = [], myAreas = DEFAULT_MY_AREAS) {
   const mine = [];
   const others = [];

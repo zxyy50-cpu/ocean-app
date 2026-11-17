@@ -1,7 +1,7 @@
 import { companyKey } from "../core/text.js";
 import { duplicateGroups } from "./customers.js";
 import { mergeCustomers, mergeImpact, mergePreview, MERGE_FIELDS } from "./merge.js";
-import { customerInAreas } from "./tags.js";
+import { groupInMyAreas } from "./tags.js";
 
 const FIELD_LABELS = Object.fromEntries(MERGE_FIELDS);
 
@@ -13,11 +13,11 @@ export function mergeSuggestions(model, { myAreas = [], mineOnly = true } = {}) 
   const suggestions = [];
   let skippedSeveralNumbers = 0;
   let skippedNoNumber = 0;
-  for (const members of duplicateGroups(model.customers)) {
+  for (const members of withAliasMatches(model.customers, duplicateGroups(model.customers))) {
     const numbered = members.filter((customer) => String(customer.customerNo || "").trim());
     if (numbered.length > 1) { skippedSeveralNumbers += 1; continue; }
     if (!numbered.length) { skippedNoNumber += 1; continue; }
-    const inMine = members.some((customer) => customerInAreas(customer, myAreas));
+    const inMine = groupInMyAreas(members, myAreas);
     if (mineOnly && !inMine) continue;
     const primary = numbered[0];
     const secondaries = members.filter((customer) => customer.id !== primary.id).map((customer) => {
@@ -29,6 +29,38 @@ export function mergeSuggestions(model, { myAreas = [], mineOnly = true } = {}) 
   }
   suggestions.sort((left, right) => Number(right.inMine) - Number(left.inMine) || left.primary.name.localeCompare(right.primary.name, "zh-Hant"));
   return { suggestions, skippedSeveralNumbers, skippedNoNumber };
+}
+
+// A numbered customer renamed to its 簡稱 keeps the old name as an alias (「雲乳食品」 was
+// 「雲乳食品科技股份有限公司」); a record without a number still called by that old name is the same
+// customer. Only an alias that belongs to exactly one numbered customer counts.
+function withAliasMatches(customers, groups) {
+  const live = customers.filter((customer) => !customer.archivedAt);
+  const owners = new Map();
+  for (const customer of live) {
+    if (!String(customer.customerNo || "").trim()) continue;
+    for (const key of new Set([customer.name, ...(customer.aliases || [])].map(companyKey))) {
+      if (key.length < 4) continue;
+      owners.set(key, owners.has(key) && owners.get(key)?.id !== customer.id ? null : customer);
+    }
+  }
+  const grouped = new Set(groups.flat().map((customer) => customer.id));
+  const extra = new Map();
+  for (const customer of live) {
+    if (grouped.has(customer.id) || String(customer.customerNo || "").trim()) continue;
+    const owner = owners.get(companyKey(customer.name));
+    if (!owner) continue;
+    extra.set(owner.id, [...(extra.get(owner.id) || []), customer]);
+  }
+  const merged = groups.map((members) => {
+    const owner = members.find((customer) => extra.has(customer.id));
+    if (!owner) return members;
+    const added = extra.get(owner.id);
+    extra.delete(owner.id);
+    return [...members, ...added];
+  });
+  for (const [ownerId, added] of extra) merged.push([live.find((customer) => customer.id === ownerId), ...added]);
+  return merged;
 }
 
 // Merges each secondary into the kept record as its own undoable merge event.

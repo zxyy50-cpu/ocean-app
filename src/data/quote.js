@@ -75,6 +75,17 @@ export function listPriceDoubtText(doubts) {
   return doubts.map((doubt) => `${doubt.code} ${doubt.name}（${doubt.spec}）\n商品清單定價 ${ntd(doubt.listPrice)}${doubt.unit ? `／${doubt.unit}` : ""}：${doubt.reasons.join("；")}`).join("\n\n");
 }
 
+// The same list as a table Excel opens (UTF-8 with BOM so 中文 shows): 商品清單's price next to the ERP's.
+export function listPriceDoubtCsv(reference, doubts) {
+  const cell = (value) => { const text = String(value ?? ""); return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text; };
+  const rows = doubts.map((doubt) => {
+    const product = reference.products.get(doubt.code) || {};
+    const erp = product.erpListDate ? [product.listPrice, product.unit, slashDate(product.erpListDate)] : ["", "", ""];
+    return [doubt.code, doubt.name, doubt.spec, doubt.listPrice, doubt.unit, ...erp, doubt.reasons.join("；")];
+  });
+  return `\ufeff${[["料號", "品名", "規格", "商品清單定價", "商品清單單位", "ERP 訂價", "ERP 單位", "ERP 日期", "原因"], ...rows].map((row) => row.map(cell).join(",")).join("\r\n")}\r\n`;
+}
+
 // What a new quote line starts at: the customer's last price, else the list price unless it is
 // doubtful (then the ERP 訂價, or nothing so 「價格待確認」 is printed rather than a wrong number).
 export function startingPrice(reference, customerNo, product) {

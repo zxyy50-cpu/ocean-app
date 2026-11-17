@@ -1,6 +1,6 @@
 import { companyKey, comparisonKey } from "../core/text.js";
 import { mergeImpact, mergePreview, MERGE_FIELDS } from "./merge.js";
-import { areaFamily, customerInAreas } from "./tags.js";
+import { areaFamily, groupInMyAreas } from "./tags.js";
 
 // 同一家公司: the imported lists brought the same company in under several names
 // (「第一生化」, 「台灣第一生化科技」, 「台灣第一生化科技股份有限公司嘉義保健飲料廠」).
@@ -103,7 +103,7 @@ function isShell(model, customer) {
 export function familyMergeSuggestions(model, { myAreas = [], mineOnly = true } = {}) {
   const suggestions = [];
   for (const members of familyIndex(model).families) {
-    if (mineOnly && !members.some((customer) => customerInAreas(customer, myAreas))) continue;
+    if (mineOnly && !groupInMyAreas(members, myAreas)) continue;
     const primary = familyLead(model, members);
     const street = streetKey(primary.address);
     const primaryKey = companyKey(primary.name);
@@ -121,7 +121,7 @@ export function familyMergeSuggestions(model, { myAreas = [], mineOnly = true } 
       const filled = preview.ok ? Object.entries(preview.defaults).filter(([, side]) => side === "secondary").map(([field]) => FIELD_LABELS[field]) : [];
       return { customer, impact: mergeImpact(model.all, customer.id), filled, why: streetKey(customer.address) ? "同一個地址" : "名單上只有名稱，沒有其他資料" };
     });
-    if (secondaries.length) suggestions.push({ key: `family:${primary.id}`, primary, secondaries, inMine: members.some((customer) => customerInAreas(customer, myAreas)) });
+    if (secondaries.length) suggestions.push({ key: `family:${primary.id}`, primary, secondaries, inMine: groupInMyAreas(members, myAreas) });
   }
   return suggestions.sort((a, b) => a.primary.name.localeCompare(b.primary.name, "zh-Hant"));
 }

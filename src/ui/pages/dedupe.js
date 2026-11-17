@@ -6,7 +6,7 @@ import { customerIdentity } from "../../data/model.js";
 import { badge, confirmDialog, emptyState, h, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { duplicateGroups } from "../../data/customers.js";
-import { customerInAreas } from "../../data/tags.js";
+import { groupInMyAreas } from "../../data/tags.js";
 import { openMergeGroupDialog } from "../forms/merge-group.js";
 import { pageHeader } from "../shell.js";
 
@@ -74,8 +74,8 @@ export function renderDedupe(ctx) {
     ctx.render();
   });
 
-  const selectAll = h("button", { type: "button", className: "small ghost", dataset: { selectAllGroups: "" }, text: `全選這頁 ${shown.length} 組`, onClick: () => {
-    shown.forEach((suggestion) => selected.add(suggestion.primary.id));
+  const selectAll = h("button", { type: "button", className: "small ghost", dataset: { selectAllGroups: "" }, text: suggestions.length > shown.length ? `全選全部 ${suggestions.length} 組` : `全選 ${shown.length} 組`, onClick: () => {
+    suggestions.forEach((suggestion) => selected.add(suggestion.primary.id));
     document.querySelectorAll("[data-pick-group]").forEach((node) => { node.checked = true; });
     ctx.refreshDedupeCount();
   } });
@@ -135,7 +135,7 @@ function manualGroups(ctx) {
   const suggested = new Set(mergeSuggestions(ctx.model, { myAreas: ctx.settings.myAreas, mineOnly: false }).suggestions.map((suggestion) => suggestion.primary.id));
   const groups = duplicateGroups(ctx.model.customers)
     .filter((members) => !members.some((customer) => suggested.has(customer.id)))
-    .filter((members) => !state.mineOnly || members.some((customer) => customerInAreas(customer, ctx.settings.myAreas)))
+    .filter((members) => !state.mineOnly || groupInMyAreas(members, ctx.settings.myAreas))
     .sort((left, right) => right.length - left.length);
   if (!groups.length) return null;
   return h("section", { className: "card", dataset: { manualGroups: "" } }, [

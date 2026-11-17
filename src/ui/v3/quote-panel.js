@@ -1,5 +1,5 @@
 import { customerChoices } from "../../data/order-intake.js";
-import { customerDeal, listPriceDoubt, listPriceDoubts, listPriceDoubtText, quoteCandidates, quoteProduct, quoteText, recentDeals, startingPrice } from "../../data/quote.js";
+import { customerDeal, listPriceDoubt, listPriceDoubtCsv, listPriceDoubts, listPriceDoubtText, quoteCandidates, quoteProduct, quoteText, recentDeals, startingPrice } from "../../data/quote.js";
 import { badge, h, money } from "../dom.js";
 
 // 產品報價 (a tab of the 訂單 page): find products by code or name, see the list price and what
@@ -139,6 +139,13 @@ export function drawQuote(box, { ctx, reference }) {
       h("div", { className: "button-row" }, [h("button", { type: "button", className: "primary", text: "複製清單（給維護商品清單的人）", onClick: async (event) => {
         const button = event.currentTarget;
         try { await navigator.clipboard.writeText(listPriceDoubtText(doubts)); button.textContent = "已複製"; } catch { button.textContent = "請長按上面文字複製"; }
+      } }), h("button", { type: "button", className: "ghost", dataset: { quoteDoubtsCsv: "" }, text: "下載表格（Excel 可開）", onClick: () => {
+        const url = URL.createObjectURL(new Blob([listPriceDoubtCsv(reference, doubts)], { type: "text/csv;charset=utf-8" }));
+        const link = h("a", { href: url, download: `商品清單定價可疑-${new Date().toISOString().slice(0, 10)}.csv` });
+        document.body.append(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       } })]),
     ] : []),
   ]) : null;
