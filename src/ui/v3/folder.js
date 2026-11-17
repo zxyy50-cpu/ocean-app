@@ -100,6 +100,17 @@ function briefSlot(ctx, customer) {
   return slot;
 }
 
+// 「#10050000・尚未聯絡」, then the ERP short name once the reference is loaded:
+// 50 records called 國立屏東科技大學 are told apart by 「屏科大某系王大明」.
+function identityLine(ctx, customer) {
+  const line = h("p", { className: "muted", dataset: { folderIdentity: "" }, text: customerIdentity(ctx.model, customer) });
+  loadReference(ctx.db).then(({ reference }) => {
+    const erp = [...(reference.customers?.get(String(customer.customerNo || ""))?.names || [])].find((name) => name && name !== customer.name);
+    if (erp) line.textContent = `${erp}・${customerIdentity(ctx.model, customer)}`;
+  }).catch(() => {});
+  return line;
+}
+
 export function renderFolder(ctx, route) {
   const customer = ctx.model.customersById.get(route.id);
   if (!customer) return emptyState("找不到這位客戶", "可能已被合併。", h("a", { className: "button primary", href: "#/search", text: "搜尋客戶" }));
@@ -111,7 +122,7 @@ export function renderFolder(ctx, route) {
 
   const head = h("section", { className: "card folder-head" }, [
     h("div", { className: "section-head" }, [
-      h("div", {}, [h("h1", { text: customer.name }), h("p", { className: "muted", dataset: { folderIdentity: "" }, text: customerIdentity(ctx.model, customer) })]),
+      h("div", {}, [h("h1", { text: customer.name }), identityLine(ctx, customer)]),
       h("button", { type: "button", className: "star", "aria-pressed": String(Boolean(customer.important)), "aria-label": customer.important ? "取消重要標記" : "標記為重要客戶", text: customer.important ? "★" : "☆", onClick: () => setImportant(ctx.db, customer.id, !customer.important, requestId("important")) }),
     ]),
     quickContact(ctx, customer),

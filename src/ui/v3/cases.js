@@ -68,8 +68,7 @@ export function renderCases(ctx) {
       note: `加權 ${shortMoney(pool.reduce((sum, opportunity) => sum + (Number(opportunity.amount) || 0) * (Number(opportunity.probability) || 0) / 100, 0))}・議價 ${pool.filter((item) => item.stage === "議價").length}・提案 ${pool.filter((item) => item.stage === "提案").length}・接觸 ${pool.filter((item) => item.stage === "接觸").length}`,
       help: "「先看這幾件」是提案、議價中有紅燈或逾期的案子，金額大的在前。其餘依階段列出；接觸階段預設收起來。要一件一件整理匯入的舊商機，按「開始整理」。",
     }),
-    h("div", { className: "search-box" }, [search]),
-    mine,
+    h("div", { className: "search-row" }, [h("div", { className: "search-box" }, [search]), mine]),
     flagged.length ? h("section", { className: "card", dataset: { caseAttention: "" } }, [
       h("div", { className: "section-head" }, [h("h2", { text: "先看這幾件" }), badge(String(Math.min(flagged.length, ATTENTION_LIMIT)), "warn")]),
       h("ul", { className: "result-rows" }, flagged.slice(0, ATTENTION_LIMIT).map(({ opportunity, red }) => caseRow(ctx, opportunity, today, red ? `★ ${red.text}` : ""))),

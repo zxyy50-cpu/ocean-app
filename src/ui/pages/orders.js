@@ -101,6 +101,13 @@ function signalRow(ctx, item, { handled = false } = {}) {
   ]);
 }
 
+// An item with a price but no quantity has no amount yet: say so instead of showing NT$ 0.
+function orderTotalLabel(items) {
+  const missing = items.filter((item) => !item.amount).length;
+  if (missing === items.length) return "金額待確認";
+  return `${money(orderTotal(items))}${missing ? `（另有 ${missing} 項金額待確認）` : ""}`;
+}
+
 function orderCard(ctx, order) {
   const items = ctx.model.itemsByOrder.get(order.id) || [];
   const status = select("status", ORDER_STATUSES, order.status, { "aria-label": "訂單狀態", dataset: { orderStatus: order.id } });
@@ -112,7 +119,7 @@ function orderCard(ctx, order) {
     h("div", { className: "section-head" }, [
       h("div", {}, [
         h("strong", {}, [order.customerId ? h("a", { href: `#/customer/${encodeURIComponent(order.customerId)}`, text: ctx.model.customerName(order.customerId) }) : order.customerName || "（未對應客戶）"]),
-        h("div", { className: "muted", text: [order.orderDate, order.source, order.orderNo, `${items.length} 項`, money(orderTotal(items))].filter(Boolean).join("・") }),
+        h("div", { className: "muted", text: [order.orderDate, order.source, order.orderNo, `${items.length} 項`, orderTotalLabel(items)].filter(Boolean).join("・") }),
       ]),
       h("div", { style: { minWidth: "140px" } }, [status]),
     ]),

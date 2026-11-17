@@ -147,6 +147,10 @@ export function renderLineOrder(ctx, route) {
       const value = event.target.value.trim();
       setDraft({ ...state.draft, customer: { ...customer, contact: value, salutation: customer.salutation || salutationFor(value, savedSalutations(ctx.model.all)) } });
     } });
+    // A second person at the customer the secretary should know about (收貨、請款…).
+    const otherContact = h("input", { value: customer.otherContact || "", placeholder: "例如：王小明 助理", "aria-label": "其他窗口", dataset: { lineOtherContact: "" }, onChange: (event) => {
+      setDraft({ ...state.draft, customer: { ...customer, otherContact: event.target.value.trim() } });
+    } });
     const salutation = h("input", { value: customer.salutation, placeholder: "例如：郁婷、陳老師", "aria-label": "客戶稱呼", dataset: { lineSalutation: "" }, className: customer.salutation ? "" : "needs-check", onChange: (event) => {
       setDraft({ ...state.draft, customer: { ...customer, salutation: event.target.value.trim() } });
     } });
@@ -170,6 +174,7 @@ export function renderLineOrder(ctx, route) {
       ]) : null,
       h("div", { className: "form-grid" }, [
         h("label", { className: "field" }, [h("span", { className: "field-label", text: "聯絡人" }), contact]),
+        h("label", { className: "field" }, [h("span", { className: "field-label", text: "其他窗口（選填）" }), otherContact]),
         h("label", { className: "field" }, [h("span", { className: "field-label", text: "客戶版稱呼（存一次會記住）" }), salutation]),
       ]),
     ]);

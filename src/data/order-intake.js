@@ -735,8 +735,9 @@ export function secretaryText(draft) {
   const inclusive = draft.taxType?.value === "含稅";
   const lines = [
     `客戶姓名：${customerDisplayName(draft) || "待確認"}`,
+    draft.customer.otherContact ? `客戶窗口：${draft.customer.otherContact}` : null,
     `客戶編號：${draft.customer.customerNo || "待確認"}`,
-  ];
+  ].filter((line) => line !== null);
   draft.items.forEach((item, index) => {
     const pending = item.checks.filter((check) => !check.soft && check.field !== "code" && check.field !== "price" && check.field !== "quantity");
     lines.push("", `${index + 1}. 訂購品項：${itemLabel(item)}${item.codeStatus === "確定" ? "" : "（待確認）"}`);
@@ -790,10 +791,16 @@ export function priceAlertText(draft) {
 }
 
 // One row per item for the LINE訂單整理 tab, in its column order; the last column is APP編號.
+// The 客戶窗口 has no column of its own in LINE訂單整理, so it travels in 備註 (app and sheet alike).
+export function draftNotes(draft) {
+  const other = cleanText(draft.customer?.otherContact || "");
+  return [other ? `客戶窗口：${other}` : "", ...draft.notes, draft.shipTime].filter(Boolean);
+}
+
 export function lineOrderRows(draft, { appIds, status = "待確認" }) {
   const inclusive = draft.taxType.value === "含稅";
   const date = draft.date.replaceAll("-", "/");
-  const notes = [...draft.notes, draft.shipTime].filter(Boolean);
+  const notes = draftNotes(draft);
   return draft.items.map((item, index) => {
     // Supply warnings (stock, expiry, discontinued, unit) are written once; other open points get 「待確認：」.
     const supply = item.checks.filter((check) => ["stock", "expiry", "discontinued", "unit"].includes(check.field)).map((check) => check.text);

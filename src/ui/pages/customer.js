@@ -10,6 +10,7 @@ import { opportunityCategory, opportunityTitle } from "../../data/products.js";
 import { badge, chipGroup, confirmDialog, emptyState, formToObject, h, money, showErrors, toast } from "../dom.js";
 import { registerPage } from "../app.js";
 import { openArchiveCustomer, openContactEditor, openCustomerEditor } from "../forms/customer-forms.js";
+import { contactFillSlot } from "../v3/contact-fill.js";
 
 function kv(rows) {
   return h("dl", { className: "kv" }, rows.filter(([, value]) => value !== undefined).flatMap(([label, value]) => [h("dt", { text: label }), h("dd", {}, [value || h("span", { className: "muted", text: "尚未填寫" })])]));
@@ -38,7 +39,7 @@ export function splitPhones(value) {
 export function quickContact(ctx, customer) {
   const contact = primaryContact(ctx.model, customer.id);
   const numbers = [contact?.mobile, contact?.phone, customer.phone].flatMap(splitPhones).filter((value, index, list) => list.indexOf(value) === index);
-  if (!contact && !numbers.length) return h("p", { className: "muted", dataset: { quickContact: "" } }, ["還沒有聯絡人或電話　", h("button", { type: "button", className: "small ghost", text: "＋ 聯絡人", onClick: () => openContactEditor(ctx, customer.id) })]);
+  if (!contact && !numbers.length) return h("p", { className: "muted", dataset: { quickContact: "" } }, ["還沒有聯絡人或電話　", h("a", { className: "button small ghost", href: `#/customer/${encodeURIComponent(customer.id)}?tab=contacts`, dataset: { quickContactFill: "" }, text: "補聯絡人" })]);
   return h("div", { className: "quick-contact", dataset: { quickContact: "" } }, [
     contact ? h("strong", { text: [contact.name, contact.title].filter(Boolean).join("・") }) : null,
     ...numbers.map((number) => h("a", { className: "button small ghost", href: `tel:${String(number).replace(/[^\d+#]/g, "")}`, dataset: { dial: "" }, text: `☎ ${number}` })),
@@ -104,6 +105,7 @@ export function contactsCard(ctx, customer) {
   const contacts = ctx.model.contactsByCustomer.get(customer.id) || [];
   return h("section", { className: "card", dataset: { section: "contacts" } }, [
     h("div", { className: "section-head" }, [h("h2", { text: `聯絡人（${contacts.length}）` }), h("button", { type: "button", className: "small ghost", dataset: { addContact: "" }, text: "＋ 聯絡人", onClick: () => openContactEditor(ctx, customer.id) })]),
+    contactFillSlot(ctx, customer),
     contacts.length ? h("ul", { className: "contact-list" }, [...contacts].sort((left, right) => Number(Boolean(right.isPrimary)) - Number(Boolean(left.isPrimary))).map((contact) => h("li", {}, [
       h("div", { className: "section-head" }, [
         h("strong", { text: `${contact.name}${contact.isPrimary ? "（主要）" : ""}` }),

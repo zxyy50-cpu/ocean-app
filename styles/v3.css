@@ -341,6 +341,7 @@ details.card[open] > summary { margin-bottom: 12px; }
 .meet-asks { gap: 12px; }
 .meet-ask { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-left: 4px solid var(--danger); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--danger-soft, var(--surface-2)); }
 .meet-ask-head { display: flex; justify-content: space-between; gap: 10px; }
+.meet-ask-head > a { display: inline-flex; align-items: center; min-height: 40px; }
 .meet-ask-input { display: flex; gap: 8px; }
 .meet-ask-input input { flex: 1; min-width: 0; font-size: 1rem; }
 .meet-check { margin: 0; font-weight: 700; }
@@ -362,3 +363,22 @@ details.card[open] > summary { margin-bottom: 12px; }
 .meet-present .when-on, :root[data-present] .meet-present .when-off { display: none; }
 :root[data-present] .meet-present .when-on { display: inline; }
 :root[data-present] .meet-present { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+
+/* Compact page headers: one line of title + number; the explanation stays on wide screens only. */
+.shell.v3 .page-header { padding: 8px 12px 8px 16px; gap: 8px; }
+.shell.v3 .page-header::before { top: 8px; bottom: 8px; }
+.page-title-row { flex-wrap: wrap; align-items: baseline; column-gap: 10px; row-gap: 0; }
+.page-title-row .page-figure { font-size: 1.2rem; }
+.shell.v3 .page-header .page-note { font-size: 0.85rem; }
+@media (max-width: 700px) {
+  .shell.v3 .page-header > .page-header-main > p { display: none; }
+  .shell.v3 .page-header .page-note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .shell.v3 .page-header .page-actions { width: 100%; }
+}
+.filter-box { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.filter-box > summary { cursor: pointer; padding: 10px 14px; min-height: 44px; display: flex; align-items: center; font-weight: 600; color: var(--sec-ink, inherit); }
+.filter-box[open] > summary { border-bottom: 1px solid var(--line); }
+.filter-box > .plan-filters { padding: 10px; }
+.search-row { display: flex; align-items: center; gap: 8px; }
+.search-row .search-box { flex: 1 1 auto; min-width: 0; }
+.search-row > .chip { flex: 0 0 auto; white-space: nowrap; }

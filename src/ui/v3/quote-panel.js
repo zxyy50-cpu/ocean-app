@@ -1,13 +1,13 @@
 import { customerChoices } from "../../data/order-intake.js";
-import { customerDeal, quoteCandidates, quoteProduct, quoteText, recentDeals } from "../../data/quote.js";
+import { customerDeal, listPriceDoubt, listPriceDoubts, listPriceDoubtText, quoteCandidates, quoteProduct, quoteText, recentDeals, startingPrice } from "../../data/quote.js";
 import { badge, h, money } from "../dom.js";
 
 // 產品報價 (a tab of the 訂單 page): find products by code or name, see the list price and what
 // customers recently paid, set the price to quote, and copy one block for LINE.
-const quote = { query: "", items: [], customer: null, pending: "" };
+const quote = { query: "", items: [], customer: null, pending: "", showDoubts: false };
 
 export function resetQuoteState() {
-  Object.assign(quote, { query: "", items: [], customer: null, pending: "" });
+  Object.assign(quote, { query: "", items: [], customer: null, pending: "", showDoubts: false });
 }
 
 // From the search page: 「#/line-order?mode=quote&code=…」 adds that product once the catalog is loaded.
@@ -20,6 +20,15 @@ export function queueQuoteCustomer(customer) {
   if (customer && quote.customer?.customerId !== customer.id) quote.customer = { customerNo: customer.customerNo || "", company: customer.name, customerId: customer.id, contact: "" };
 }
 
+// Why 商品清單's price looks wrong, and what was used instead.
+function doubtNote(doubt) {
+  if (!doubt) return null;
+  return h("div", { className: "warning-banner", dataset: { quoteDoubt: doubt.code } }, [
+    h("strong", { text: "定價可疑" }),
+    h("span", { text: `${doubt.reasons.join("；")}。${doubt.suggested ? `報價先用${doubt.suggested.source} ${money(doubt.suggested.price)}。` : "報價先留空，請自己填。"}` }),
+  ]);
+}
+
 function priceText(value, unit) {
   return value === null || value === undefined ? "定價未填" : `${money(value)}${unit ? `／${unit}` : ""}`;
 }
@@ -27,13 +36,13 @@ function priceText(value, unit) {
 export function drawQuote(box, { ctx, reference }) {
   if (quote.pending) {
     const product = quoteProduct(reference, quote.pending);
-    if (product && !quote.items.some((item) => item.code === product.code)) quote.items.push({ ...product, price: product.listPrice });
+    if (product && !quote.items.some((item) => item.code === product.code)) quote.items.push({ ...product, price: startingPrice(reference, quote.customer?.customerNo, product) });
     if (product || reference.productList.length) quote.pending = "";
   }
   const redraw = () => drawQuote(box, { ctx, reference });
 
   const add = (product) => {
-    if (!quote.items.some((item) => item.code === product.code)) quote.items.push({ ...product, price: customerDeal(reference, quote.customer?.customerNo, product.code)?.unitPrice ?? product.listPrice });
+    if (!quote.items.some((item) => item.code === product.code)) quote.items.push({ ...product, price: startingPrice(reference, quote.customer?.customerNo, product) });
     redraw();
   };
 
@@ -69,6 +78,7 @@ export function drawQuote(box, { ctx, reference }) {
           h("span", { className: "quote-list-price", dataset: { quoteListPrice: product.code }, text: `定價 ${priceText(product.listPrice, product.unit)}（未稅）${product.listSource ? `・商品清單沒填，取自${product.listSource}` : ""}` }),
           mine ? h("small", { className: "quote-deal-mine", text: `這位客戶上次 ${money(mine.unitPrice)}（${String(mine.date).replaceAll("-", "/")}）` }) : null,
           deals.length ? h("small", { className: "muted", text: `最近成交：${deals.map((deal) => `${deal.customerName} ${money(deal.unitPrice)}（${String(deal.date).slice(0, 7).replace("-", "/")}）`).join("、")}` }) : null,
+          doubtNote(listPriceDoubt(reference, product.code)),
           product.discontinued ? badge("規格註記停產", "warn") : null,
           product.notInCatalog ? badge("商品清單沒有，資料來自購買紀錄", "warn") : null,
         ]),
@@ -90,6 +100,7 @@ export function drawQuote(box, { ctx, reference }) {
         h("strong", { text: `${item.code}｜${item.name}` }),
         h("small", { className: "muted", text: item.spec }),
         h("small", { text: `定價 ${priceText(item.listPrice, item.unit)}` }),
+        doubtNote(listPriceDoubt(reference, item.code)),
       ]),
       h("label", { className: "quote-price" }, [h("span", { text: "報價 $" }), h("input", {
         type: "number", inputmode: "decimal", min: "0", step: "any", value: item.price ?? "", "aria-label": `${item.code} 報價`, dataset: { quotePrice: item.code },
@@ -105,9 +116,27 @@ export function drawQuote(box, { ctx, reference }) {
     } })]),
   ]) : null;
 
+  // 定價健檢: every doubtful 商品清單 price, ready to send to whoever keeps the list.
+  const doubts = reference.productList.length ? listPriceDoubts(reference) : [];
+  const doubtSection = doubts.length ? h("section", { className: "card stack", dataset: { quoteDoubts: "" } }, [
+    h("div", { className: "section-head" }, [
+      h("h2", { text: `商品清單定價可疑（${doubts.length} 項）` }),
+      h("button", { type: "button", className: "small ghost", dataset: { quoteDoubtsToggle: "" }, text: quote.showDoubts ? "收起" : "列出來", onClick: () => { quote.showDoubts = !quote.showDoubts; redraw(); } }),
+    ]),
+    h("small", { className: "muted", text: "和 ERP 出貨的訂價差超過一成，或是最近成交價的兩倍以上／一半以下。報價時這些不會直接帶入商品清單的定價。" }),
+    ...(quote.showDoubts ? [
+      h("pre", { className: "line-output", dataset: { quoteDoubtsText: "" }, text: listPriceDoubtText(doubts) }),
+      h("div", { className: "button-row" }, [h("button", { type: "button", className: "primary", text: "複製清單（給維護商品清單的人）", onClick: async (event) => {
+        const button = event.currentTarget;
+        try { await navigator.clipboard.writeText(listPriceDoubtText(doubts)); button.textContent = "已複製"; } catch { button.textContent = "請長按上面文字複製"; }
+      } })]),
+    ] : []),
+  ]) : null;
+
   box.replaceChildren(
     h("section", { className: "card stack" }, [h("div", { className: "search-box" }, [search]), results, customerRow]),
     ...(basket ? [basket] : []),
+    ...(doubtSection ? [doubtSection] : []),
   );
   drawResults();
 }

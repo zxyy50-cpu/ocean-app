@@ -183,6 +183,10 @@ button.link { border: 0; background: none; color: var(--accent); padding: 0; min
 .due { font-size: 0.82rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
 .task-row.warn .due { color: var(--warn); }
 .task-row .row-actions { grid-column: 1 / -1; }
+/* 一次整理: a visible checkbox before each row (the .chip style hides its input behind label text). */
+.task-row.pickable { grid-template-columns: auto 1fr auto; }
+.pick-box { display: flex; align-items: center; padding: 6px; margin: -6px 0 -6px -6px; cursor: pointer; }
+.pick-box input[type="checkbox"] { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .more-row { list-style: none; padding: 6px 12px; font-size: 0.9rem; font-weight: 600; }
 details.section summary { display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 700; list-style: none; }
 details.section[open] summary { margin-bottom: 10px; }

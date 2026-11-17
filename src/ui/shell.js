@@ -91,8 +91,8 @@ export function helpTip(text, label = "說明") {
 export function pageHeader(title, subtitle = "", actions = [], { figure = "", note = "", help = "", progress = null } = {}) {
   return h("header", { className: `page-header${figure ? " has-figure" : ""}` }, [
     h("div", { className: "page-header-main" }, [
-      h("div", { className: "page-title-row" }, [h("h1", { text: title }), helpTip(help)]),
-      figure ? h("strong", { className: "page-figure", dataset: { pageFigure: "" }, text: figure }) : null,
+      // Title and its number share one line, so the page starts with content, not a banner.
+      h("div", { className: "page-title-row" }, [h("h1", { text: title }), figure ? h("strong", { className: "page-figure", dataset: { pageFigure: "" }, text: figure }) : null, helpTip(help)]),
       note ? h("small", { className: "page-note", text: note }) : null,
       subtitle ? h("p", { text: subtitle }) : null,
       progress !== null ? h("div", { className: "page-progress", role: "img", "aria-label": `${Math.round(progress)}%` }, [h("i", { style: { width: `${Math.max(0, Math.min(100, progress))}%` } })]) : null,

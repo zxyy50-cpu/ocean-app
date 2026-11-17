@@ -13,6 +13,14 @@ const number = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+// LINE訂單整理 writes 數量 as said: 「3瓶」 is 3 瓶. 「40支（1箱）」 is left alone: its 價格 may be per 支 or per 箱.
+function lineQuantity(value) {
+  const plain = number(value);
+  if (plain !== null) return { quantity: plain, unit: "" };
+  const said = cleanText(value).match(/^(\d+(?:\.\d+)?)\s*([^\d\s（()）；;,，/]{1,3})$/u);
+  return said ? { quantity: Number(said[1]), unit: said[2] } : { quantity: null, unit: "" };
+}
+
 // 10001000.0 → "10001000"; spreadsheet numbers come back as floats.
 export function normalizeCustomerNo(value) {
   return cleanText(value).replace(/\.0+$/, "");
@@ -70,10 +78,11 @@ export function normalizeReference(raw = {}) {
   const lineOrders = [];
   for (const row of raw.lineOrders || []) {
     const { company, contact } = splitCustomerName(row["客戶姓名"]);
+    const said = lineQuantity(row["數量"]);
     const entry = {
       source: "LINE", customerNo: normalizeCustomerNo(row["客戶編號"]), customerName: company, contact, code: normalizeCode(row["產品編號"]),
-      name: cleanText(row["訂購品項"]), spec: cleanText(row["規格"]), quantity: number(row["數量"]), unitPrice: number(row["價格"]), listPrice: null,
-      unit: "", date: normalizeDate(row["日期"]), orderNo: "", note: cleanText(row["備註"]), status: cleanText(row["狀態"]), taxType: cleanText(row["稅額"]),
+      name: cleanText(row["訂購品項"]), spec: cleanText(row["規格"]), quantity: said.quantity, unitPrice: number(row["價格"]), listPrice: null,
+      unit: said.unit, date: normalizeDate(row["日期"]), orderNo: "", note: cleanText(row["備註"]), status: cleanText(row["狀態"]), taxType: cleanText(row["稅額"]),
       delivery: cleanText(row["配送方式"]), raw: cleanText(row["原始訊息"]), appId: cleanText(row["APP編號"]),
     };
     lineOrders.push(entry);
@@ -110,6 +119,8 @@ export function normalizeReference(raw = {}) {
     remember(customerNo, row["客戶名稱"], cleanText(row["聯絡人"]).split(/\s+/)[0]);
     const customer = customers.get(customerNo);
     if (customer && !customer.phone) customer.phone = cleanText(row["電話"]);
+    // The full row too, so a customer missing its 聯絡人／電話／地址 can be filled from it.
+    if (customer) (customer.sheetRows ||= []).push({ name: cleanText(row["客戶名稱"]), contact: cleanText(row["聯絡人"]), phone: cleanText(row["電話"]), email: cleanText(row["信箱"]), address: cleanText(row["地址"]) });
   }
   return { products, productList: [...products.values()], history, byCustomerCode, lineOrders, customers, customerRows, loadedAt: raw.loadedAt || "" };
 }

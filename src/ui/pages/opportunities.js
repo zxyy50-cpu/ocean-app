@@ -37,7 +37,7 @@ function opportunityCard(ctx, opportunity, { selectable = false, selected = null
   ]);
 }
 
-function openBatchDialog(ctx, ids, mode) {
+export function openBatchDialog(ctx, ids, mode, { onDone } = {}) {
   return openDialog((close) => {
     const form = h("form", { className: "sheet-body", dataset: { form: `batch-${mode}` } }, [
       h("h2", { text: mode === "postpone" ? `延後 ${ids.length} 件商機的預計結案日` : `將 ${ids.length} 件商機標記為未成交` }),
@@ -61,6 +61,7 @@ function openBatchDialog(ctx, ids, mode) {
       }
       close();
       toast(`已更新 ${ids.length} 件商機`);
+      onDone?.();
     });
     return form;
   }, { label: "批次整理商機" });

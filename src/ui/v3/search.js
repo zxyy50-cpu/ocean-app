@@ -22,18 +22,49 @@ export function resetSearchState() {
 }
 
 // Records of one company (factories, names from other lists) show as one row, the main record first.
-function companyRows(ctx, hits) {
+// A typed 客戶編號 (or a 簡稱 match) is the customer wanted: it leads its row instead of hiding
+// among 50 records that are all called 國立屏東科技大學.
+function companyRows(ctx, hits, query = "", pinned = new Set()) {
   const { familyOf } = familyIndex(ctx.model);
+  const number = String(query).trim().replace(/^#/, "");
+  const wanted = new Set(pinned);
+  if (/^\d{5,10}$/.test(number)) hits.forEach(({ customer }) => { if (String(customer.customerNo) === number) wanted.add(customer); });
   const seen = new Set();
   const rows = [];
-  for (const { customer, outsideMyAreas } of hits) {
+  for (const { customer, outsideMyAreas } of [...hits.filter((hit) => wanted.has(hit.customer)), ...hits.filter((hit) => !wanted.has(hit.customer))]) {
     if (seen.has(customer.id)) continue;
     const members = familyOf.get(customer.id) || [customer];
-    members.forEach((member) => seen.add(member.id));
-    const lead = familyLead(ctx.model, members, customer);
-    rows.push({ lead, others: members.filter((member) => member.id !== lead.id), outsideMyAreas });
+    const lead = wanted.has(customer) ? customer : familyLead(ctx.model, members, customer);
+    // Other wanted members of the same family get rows of their own.
+    const others = members.filter((member) => member.id !== lead.id && !(wanted.has(member) && hits.some((hit) => hit.customer === member)));
+    [lead, ...others].forEach((member) => seen.add(member.id));
+    rows.push({ lead, others, outsideMyAreas });
   }
   return rows;
+}
+
+// Customers whose 簡稱 (from 客戶資料 or ERP orders) contains the query: 「屏科大某系」, 「王大明」.
+function shortNameHits(ctx, query) {
+  const key = comparisonKey(query);
+  if (!catalog?.customers?.size || key.length < 2) return [];
+  const byNo = new Map(ctx.model.customers.filter((customer) => !customer.archivedAt && customer.customerNo).map((customer) => [String(customer.customerNo), customer]));
+  const hits = [];
+  for (const [customerNo, entry] of catalog.customers) {
+    const customer = byNo.get(customerNo);
+    if (customer && [...entry.names].some((name) => name !== customer.name && comparisonKey(name).includes(key))) hits.push(customer);
+    if (hits.length >= 30) break;
+  }
+  return hits;
+}
+
+// The ERP short name (「屏科大某系王大明」) tells apart records that share one full name.
+function erpName(customer) {
+  const names = [...(catalog?.customers?.get(String(customer.customerNo || ""))?.names || [])];
+  return names.find((name) => name && name !== customer.name) || "";
+}
+
+function identity(ctx, customer) {
+  return [erpName(customer), customerIdentity(ctx.model, customer)].filter(Boolean).join("・");
 }
 
 // 產品 (商品清單): each row opens 產品報價 with that product already added.
@@ -102,6 +133,13 @@ export function renderSearch(ctx, route) {
       found.customers = filtered.items;
       found.totals = { ...found.totals, customers: filtered.total };
     }
+    const pinned = new Set(filtering || !query.trim() ? [] : shortNameHits(ctx, query));
+    if (pinned.size) {
+      const already = new Set(found.customers.map((hit) => hit.customer.id));
+      const extra = [...pinned].filter((customer) => !already.has(customer.id)).map((customer) => ({ customer, outsideMyAreas: false }));
+      found.customers = [...extra, ...found.customers];
+      found.totals = { ...found.totals, customers: found.totals.customers + extra.length };
+    }
     // Same-name records get one 「整理」 button (on the first of them shown).
     const offered = new Set();
     const tidyButton = (customer) => {
@@ -113,16 +151,16 @@ export function renderSearch(ctx, route) {
     };
     const sections = [
       (() => {
-        const rows = companyRows(ctx, found.customers);
+        const rows = companyRows(ctx, found.customers, query, pinned);
         return group("客戶", found.totals.customers, found.customers.length, rows.map(({ lead, others, outsideMyAreas }) => h("li", { className: "result-with-action", dataset: { searchCompany: lead.id } }, [
           h("div", { className: "search-company" }, [
             h("a", { href: `#/customer/${encodeURIComponent(lead.id)}` }, [
               h("strong", {}, highlight(lead.name, query)),
-              h("small", { className: "muted", text: [customerIdentity(ctx.model, lead), outsideMyAreas ? "非我的區域" : ""].filter(Boolean).join("・") }),
+              h("small", { className: "muted", text: [identity(ctx, lead), outsideMyAreas ? "非我的區域" : ""].filter(Boolean).join("・") }),
             ]),
             others.length ? h("details", { className: "search-family", dataset: { searchFamily: lead.id } }, [
               h("summary", { text: `同公司另有 ${others.length} 筆（工廠或其他名單上的名稱）` }),
-              h("ul", {}, others.map((customer) => h("li", {}, [h("a", { href: `#/customer/${encodeURIComponent(customer.id)}` }, [h("span", {}, highlight(customer.name, query)), h("small", { className: "muted", text: customerIdentity(ctx.model, customer) })])]))),
+              h("ul", {}, others.map((customer) => h("li", {}, [h("a", { href: `#/customer/${encodeURIComponent(customer.id)}` }, [h("span", {}, highlight(customer.name, query)), h("small", { className: "muted", text: identity(ctx, customer) })])]))),
             ]) : null,
           ]),
           tidyButton(lead),

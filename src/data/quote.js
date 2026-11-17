@@ -1,3 +1,4 @@
+import { comparisonKey } from "../core/text.js";
 import { productCandidates } from "./order-intake.js";
 import { priceStory } from "./order-reference.js";
 
@@ -25,8 +26,71 @@ export function quoteProduct(reference, code) {
   return entry ? { code, name: entry.name, nameZh: "", spec: entry.spec, unit: entry.unit, brand: "", ...historyListPrice(reference, code), discontinued: false, notInCatalog: true } : null;
 }
 
+// 商品清單's 未稅定價 is sometimes wrong (DIF218661: 13,700 per SET while every deal is about 3,400
+// a bottle). It is checked against the ERP 訂價 on shipments and against recent deals; a doubt says
+// why and, when the ERP has a price, which one to quote instead.
+const ntd = (value) => `NT$ ${Number(value).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+const slashDate = (value) => String(value || "").replaceAll("-", "/");
+
+export function listPriceDoubt(reference, code) {
+  const product = reference.products.get(code);
+  if (!product?.listPrice) return null;
+  const list = product.listPrice;
+  // reference.history is newest first.
+  const entries = reference.history.filter((item) => item.code === code);
+  const reasons = [];
+  const erp = entries.find((item) => item.source === "出貨" && item.listPrice);
+  const erpDiffers = erp && Math.abs(list / erp.listPrice - 1) > 0.1;
+  if (erpDiffers) reasons.push(`ERP 訂價是 ${ntd(erp.listPrice)}（${slashDate(erp.date)}）`);
+  const prices = entries.filter((item) => item.unitPrice > 0).slice(0, 6).map((item) => item.unitPrice);
+  if (prices.length) {
+    const high = Math.max(...prices);
+    const low = Math.min(...prices);
+    if (list > high * 2) reasons.push(`是最近成交最高價 ${ntd(high)} 的 ${Math.round((list / high) * 10) / 10} 倍`);
+    else if (list < low / 2) reasons.push(`不到最近成交最低價 ${ntd(low)} 的一半`);
+  }
+  if (!reasons.length) return null;
+  const specUnit = (String(product.spec || "").match(/\/\s*([A-Za-z]+)\s*$/) || [])[1];
+  if (specUnit && product.unit && specUnit.toUpperCase() !== product.unit.toUpperCase()) reasons.push(`規格是每 ${specUnit}，銷售單位卻是 ${product.unit}`);
+  return { code, listPrice: list, unit: product.unit, reasons, suggested: erpDiffers ? { price: erp.listPrice, source: `ERP 訂價（${slashDate(erp.date)}）` } : null };
+}
+
+// Every doubtful list price, the furthest off first, to send back to whoever keeps 商品清單.
+export function listPriceDoubts(reference) {
+  const doubts = [];
+  for (const product of reference.productList) {
+    const doubt = listPriceDoubt(reference, product.code);
+    if (doubt) doubts.push({ ...doubt, name: product.name, spec: product.spec });
+  }
+  const off = (doubt) => { const other = doubt.suggested?.price; return other ? Math.abs(Math.log(doubt.listPrice / other)) : 0; };
+  return doubts.sort((left, right) => off(right) - off(left) || left.code.localeCompare(right.code));
+}
+
+export function listPriceDoubtText(doubts) {
+  return doubts.map((doubt) => `${doubt.code} ${doubt.name}（${doubt.spec}）\n商品清單定價 ${ntd(doubt.listPrice)}${doubt.unit ? `／${doubt.unit}` : ""}：${doubt.reasons.join("；")}`).join("\n\n");
+}
+
+// What a new quote line starts at: the customer's last price, else the list price unless it is
+// doubtful (then the ERP 訂價, or nothing so 「價格待確認」 is printed rather than a wrong number).
+export function startingPrice(reference, customerNo, product) {
+  const mine = customerDeal(reference, customerNo, product.code);
+  if (mine) return mine.unitPrice;
+  const doubt = listPriceDoubt(reference, product.code);
+  return doubt ? doubt.suggested?.price ?? null : product.listPrice;
+}
+
 export function quoteCandidates(reference, query, limit = 8) {
-  return productCandidates(query, reference, "", limit).map((candidate) => quoteProduct(reference, candidate.code)).filter(Boolean);
+  const codes = productCandidates(query, reference, "", limit).map((candidate) => candidate.code);
+  // Sold before but missing from 商品清單 (GIB211693): still quotable from the purchase history.
+  const key = comparisonKey(query);
+  if (key.length >= 3) {
+    for (const entry of reference.history) {
+      if (codes.length >= limit) break;
+      if (reference.products.has(entry.code) || codes.includes(entry.code)) continue;
+      if (comparisonKey(`${entry.code} ${entry.name}`).includes(key)) codes.push(entry.code);
+    }
+  }
+  return codes.map((code) => quoteProduct(reference, code)).filter(Boolean);
 }
 
 // The latest price each customer paid for this product, newest first.

@@ -29,11 +29,37 @@ export async function deviceId(db) {
   return id;
 }
 
+const SESSION_META = "syncSession";
+
+// The 30-day session from the Apps Script, kept on this device (never in source or the sheet).
+export async function createSessionStore(db, onChange = () => {}) {
+  let value = await db.getMeta(SESSION_META, null);
+  const valid = () => value?.token && Number(value.exp || 0) - Date.now() > 60000;
+  return {
+    get: () => (valid() ? value : null),
+    async set(next) { value = next; await db.setMeta(SESSION_META, next); onChange(); },
+    async clear() { value = null; await db.setMeta(SESSION_META, null); onChange(); },
+  };
+}
+
+// While the session is good the APP counts as signed in, and Google is not asked every hour.
+export function withSession(google, session) {
+  return {
+    ...google,
+    email: () => session.get()?.email || google.email(),
+    signedIn: () => Boolean(session.get()) || google.signedIn(),
+    needsClick: () => !session.get() && google.needsClick(),
+    signOut: () => { session.clear(); google.signOut(); },
+  };
+}
+
 // Wires sign-in, transport and the sync client into the running app.
 export async function connectSync(ctx, config, { auth: authOverride, transport: transportOverride } = {}) {
   const device = await deviceId(ctx.db);
-  const auth = authOverride || createGoogleAuth({ clientId: config.clientId, onChange: () => ctx.refreshChrome() });
-  const transport = transportOverride || createAppsScriptTransport({ endpoint: config.endpoint, getIdToken: () => auth.getIdToken(), deviceId: device });
+  const google = authOverride || createGoogleAuth({ clientId: config.clientId, onChange: () => ctx.refreshChrome() });
+  const session = await createSessionStore(ctx.db, () => ctx.refreshChrome());
+  const auth = withSession(google, session);
+  const transport = transportOverride || createAppsScriptTransport({ endpoint: config.endpoint, getIdToken: () => google.getIdToken(), session, deviceId: device });
   const client = createSyncClient({ db: ctx.db, transport, onStatus: () => ctx.refreshChrome() });
   ctx.auth = auth;
   // Order intake calls the same Apps Script for its own actions (reference data, LINE sheet, OCR).

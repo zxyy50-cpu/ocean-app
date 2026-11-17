@@ -9,7 +9,7 @@ import { openHoldDialog } from "../forms/hold.js";
 
 const PAGE = 40;
 let lastCounts = { total: 0, a: 0 };
-const state = { view: "list", area: "", tier: "", grade: "", group: "", smallOnly: false, notContactedOnly: true, mineOnly: true, limit: PAGE };
+const state = { filtersOpen: false, view: "list", area: "", tier: "", grade: "", group: "", smallOnly: false, notContactedOnly: true, mineOnly: true, limit: PAGE };
 
 export function resetPlanState() {
   Object.assign(state, { view: "list", area: "", tier: "", grade: "", group: "", smallOnly: false, notContactedOnly: true, mineOnly: true, limit: PAGE });
@@ -18,6 +18,18 @@ export function resetPlanState() {
 function filterSelect(label, key, options, ctx) {
   return h("select", { "aria-label": label, dataset: { planFilter: key }, onChange: (event) => { state[key] = event.target.value; state.limit = PAGE; ctx.render(); } },
     options.map(([value, text]) => h("option", { value, text, selected: value === state[key] })));
+}
+
+// Four selects and two chips took most of a phone screen; they fold behind one line
+// that says what is chosen, and stay open once opened.
+function filterBox(controls) {
+  const chosen = [state.grade && `${state.grade} 級`, state.area, state.group, state.tier && `需求${state.tier}`, state.notContactedOnly && "未接觸", state.smallOnly && "規模小"].filter(Boolean);
+  const box = h("details", { className: "filter-box", open: state.filtersOpen, dataset: { planFilters: "" } }, [
+    h("summary", { text: chosen.length ? `篩選：${chosen.join("・")}` : "篩選" }),
+    h("div", { className: "plan-filters" }, controls),
+  ]);
+  box.addEventListener("toggle", () => { state.filtersOpen = box.open; });
+  return box;
 }
 
 function chip(label, checked, data, onChange) {
@@ -81,15 +93,15 @@ function listView(ctx, areas) {
   const selectSmall = state.smallOnly && shown.length ? h("button", { type: "button", className: "small ghost", dataset: { planPickAll: "" }, text: `全選這頁 ${shown.length} 家`, onClick: () => { shown.forEach((item) => selected.add(item.customer.id)); document.querySelectorAll("[data-plan-pick]").forEach((node) => { node.checked = true; }); refreshBar(); } }) : null;
 
   return h("div", { className: "stack" }, [
-    h("div", { className: "plan-filters" }, [
+    filterBox([
       filterSelect("優先級", "grade", [["", "全部優先級"], ["A", "A 級：先開發"], ["B", "B 級"], ["C", "C 級"]], ctx),
       areaSelect,
       filterSelect("產業群組", "group", [["", "全部產業"], ...GROUP_NAMES.map((name) => [name, name])], ctx),
       tierSelect,
       chip("只看未接觸", state.notContactedOnly, { planNotContacted: "" }, (value) => { state.notContactedOnly = value; state.limit = PAGE; ctx.render(); }),
       chip("只看規模小", state.smallOnly, { planSmall: "" }, (value) => { state.smallOnly = value; state.limit = PAGE; ctx.render(); }),
-      selectSmall,
     ]),
+    selectSmall,
     h("p", { className: "muted", dataset: { planCount: "" }, text: `${items.length} 家可開發（A ${items.filter((item) => item.grade === "A").length}・B ${items.filter((item) => item.grade === "B").length}・C ${items.filter((item) => item.grade === "C").length}），A 級在前。勾選幾家可以開 Google 地圖路線。` }),
     bar,
     shown.length ? h("ul", { className: "plan-list" }, shown.map((item) => prospectCard(ctx, item, selected, refreshBar))) : h("section", { className: "card" }, [emptyState("這個條件下沒有要開發的客戶", "換個區域，或取消「只看未接觸」。")]),

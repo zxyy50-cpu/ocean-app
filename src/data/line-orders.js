@@ -1,8 +1,9 @@
 import { uuid } from "../core/ids.js";
 import { cleanText, comparisonKey } from "../core/text.js";
-import { aliasKey, customerDisplayName, lineOrderRows, LINE_ORDER_STATUSES, withTax } from "./order-intake.js";
+import { aliasKey, customerDisplayName, lineOrderRows, LINE_ORDER_STATUSES, draftNotes, withTax } from "./order-intake.js";
 import { emptyReference, normalizeReference, tablesToRecords } from "./order-reference.js";
 import { readSetting, saveSetting } from "./settings.js";
+import { applyDirectory, loadDirectory } from "./customer-directory.js";
 
 // Storage and Google Sheets side of LINE orders.
 // The reference tables are cached on the device (meta "orderReference") so the page works offline;
@@ -16,9 +17,17 @@ let cached = { key: "", reference: null };
 
 export async function loadReference(db) {
   const stored = await db.getMeta(REFERENCE_META, null);
-  if (!stored) return { reference: emptyReference(), loadedAt: "", stale: true };
-  if (cached.key !== stored.loadedAt) cached = { key: stored.loadedAt, reference: normalizeReference(stored) };
+  // The pasted 客戶資料 (簡稱、聯絡人) is folded in whether or not the company workbook was downloaded.
+  const directory = await loadDirectory(db);
+  const key = `${stored?.loadedAt || ""}|${directory?.loadedAt || ""}`;
+  if (cached.key !== key) cached = { key, reference: applyDirectory(stored ? normalizeReference(stored) : emptyReference(), directory) };
+  if (!stored) return { reference: cached.reference, loadedAt: "", stale: true };
   return { reference: cached.reference, loadedAt: stored.loadedAt, stale: Date.now() - Date.parse(stored.loadedAt || 0) > REFRESH_AFTER_MS };
+}
+
+// After pasting a new 客戶資料, the next load rebuilds.
+export function forgetReference() {
+  cached = { key: "", reference: null };
 }
 
 export async function refreshReference(db, transport) {
@@ -121,7 +130,7 @@ export async function saveLineOrder(db, draft, requestId) {
     const order = await tx.create("order", {
       orderNo: `LINE-${orderKey}`, customerId: draft.customer.customerId || "", customerNo: draft.customer.customerNo || "", customerName: customerDisplayName(draft),
       orderDate: draft.date, status: "待確認", source: "LINE", deliveryMethod: draft.delivery.value, taxType: draft.taxType.value,
-      notes: [...draft.notes, draft.shipTime].filter(Boolean).join("；"), rawMessage: draft.raw, sourceRef: "line-sheet:pending",
+      notes: draftNotes(draft).join("；"), rawMessage: draft.raw, sourceRef: "line-sheet:pending",
     });
     for (const [index, item] of draft.items.entries()) {
       await tx.create("orderItem", {

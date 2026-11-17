@@ -209,7 +209,8 @@ export function parseCapture(model, text, { today, toolkit = [] } = {}) {
   const said = clauses.filter((clause) => !CLOSING.test(clause)).map((clause) => parseDate(clause, today)).filter((date) => date && !/今天|今日/.test(date.text)).pop() || null;
   const objections = OBJECTION_WORDS.filter(([, pattern]) => pattern.test(value)).map(([id]) => id);
   const reaction = REACTIONS.find(([, pattern]) => pattern.test(value))?.[0] || "";
-  const channel = CHANNELS.find(([, pattern]) => pattern.test(value))?.[0] || "";
+  // The way first named is how it happened: 「今天拜訪…下週再打電話」 was a visit, the call is the next step.
+  const channel = CHANNELS.map(([name, pattern]) => ({ name, at: value.search(pattern) })).filter(({ at }) => at >= 0).sort((left, right) => left.at - right.at)[0]?.name || "";
   const noReminder = NO_FOLLOW_UP.test(value);
   // When nothing was said: try again tomorrow if they couldn't be reached, otherwise in a week.
   const reminder = said || (noReminder || !top ? null : reaction === "無法聯絡" ? { date: addWorkdays(today, 1), text: "聯絡不上，明天再試", suggested: true } : { date: addWorkdays(today, 7), text: "沒提到，先排一週後", suggested: true });
