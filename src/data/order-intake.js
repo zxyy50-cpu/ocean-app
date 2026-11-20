@@ -53,7 +53,9 @@ function nameIndex(model, reference) {
   const entries = [];
   const add = (name, customerNo, kind, extra = {}) => {
     const key = kind === "contact" ? comparisonKey(name) : companyKey(name);
-    if (key.length >= 2) entries.push({ key, name: cleanText(name), customerNo: normalizeCustomerNo(customerNo), kind, ...extra });
+    // A 「name」 that is only digits (old imports left contacts called 「10」「20」) is no name:
+    // matching it would cut 「20」 out of 「$8200」.
+    if (key.length >= 2 && !/^[\d\s()#+-]+$/.test(cleanText(name))) entries.push({ key, name: cleanText(name), customerNo: normalizeCustomerNo(customerNo), kind, ...extra });
   };
   for (const customer of reference.customers.values()) {
     customer.names.forEach((name) => add(name, customer.customerNo, "company"));
@@ -65,6 +67,24 @@ function nameIndex(model, reference) {
     (model.contactsByCustomer.get(customer.id) || []).forEach((contact) => add(contact.name, customer.customerNo, "contact", { customerId: customer.id }));
   }
   return entries;
+}
+
+// Who could be ordering for this customer: the APP's own contacts (main contact first, so ones
+// added on the customer page show up), then names from 客戶資料 and earlier orders.
+export function contactChoicesFor({ model, reference, customerNo = "", customerId = "" }) {
+  const no = normalizeCustomerNo(customerNo);
+  const appCustomers = (model?.customers || []).filter((customer) => !customer.archivedAt && ((customerId && customer.id === customerId) || (no && normalizeCustomerNo(customer.customerNo) === no)));
+  const appContacts = appCustomers.flatMap((customer) => model.contactsByCustomer?.get(customer.id) || [])
+    .filter((contact) => !contact.archivedAt)
+    .sort((left, right) => Number(Boolean(right.isPrimary)) - Number(Boolean(left.isPrimary)))
+    .map((contact) => contact.name);
+  const seen = new Set();
+  return [...appContacts, ...(reference?.customers?.get(no)?.contacts || [])].map(cleanText).filter((name) => {
+    const key = comparisonKey(name);
+    if (!key || /^[\d\s()#+-]+$/.test(name) || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function appCustomerFor(model, customerNo, names = []) {
@@ -393,12 +413,12 @@ export function priceFor({ reference, customerNo, code, specified, today }) {
     source = `最近成交 ${story.latest.date.replaceAll("-", "/")}${story.latest.source === "LINE" ? "（LINE 訂單）" : ""}`;
   } else if (product?.listPrice) {
     unitPrice = product.listPrice;
-    source = "商品清單定價（客戶沒買過）";
+    source = product.erpListDate ? `ERP 訂價（${product.erpListDate.replaceAll("-", "/")}，客戶沒買過）` : "商品清單定價（客戶沒買過）";
     // A list price far from what other customers recently paid is often a pack-size or data error.
     const others = reference.history.find((entry) => entry.code === code && entry.unitPrice !== null);
     if (others) {
       source += `；其他客戶最近成交 ${others.unitPrice}（${others.date.replaceAll("-", "/")}）`;
-      if (Math.abs(product.listPrice - others.unitPrice) / others.unitPrice > 0.5) alerts.push(`商品清單定價 ${product.listPrice} 與其他客戶最近成交價 ${others.unitPrice} 差很多，請確認`);
+      if (Math.abs(product.listPrice - others.unitPrice) / others.unitPrice > 0.5) alerts.push(`${product.erpListDate ? "ERP 訂價" : "商品清單定價"} ${product.listPrice} 與其他客戶最近成交價 ${others.unitPrice} 差很多，請確認`);
     }
   } else {
     status = "待確認";
@@ -613,6 +633,8 @@ export function finishItem(base, { reference, customerNo, today }) {
   pricing.alerts.forEach((text) => checks.push({ field: "price", text, soft: true }));
   if (unitMismatch(base.spokenUnit, salesUnit)) checks.push({ field: "unit", text: `客戶說「${base.spokenUnit}」，銷售單位是 ${salesUnit}，請確認數量`, soft: true });
   if (base.code && !product) checks.push({ field: "discontinued", text: "商品清單查無此料號，可能停售或停產，請確認" });
+  // Shipped before but not in 商品清單: usually still sold, just never listed.
+  if (product?.fromHistory) checks.push({ field: "discontinued", text: "商品清單沒有這個料號（購買紀錄有），請確認還有在賣", soft: true });
   // The 商品清單 itself marks some items, e.g. 規格「(停產)100 test /BOX」.
   if (product && /停產|停售|停止供應|已停/u.test(`${product.name} ${product.nameZh} ${product.spec}`)) checks.push({ field: "discontinued", text: `商品清單標示 ${base.code} 已停產／停售，請確認替代品項` });
   const stopped = base.code && reference.lineOrders.find((entry) => /停產|停售/u.test(entry.note) && entry.note.includes(base.code) && entry.code !== base.code);
@@ -694,7 +716,7 @@ export function customerChoices(query, { model, reference, limit = 8 }) {
 
 export function productLabel(reference, code) {
   const product = reference.products.get(code);
-  if (product) return [code, product.name, product.nameZh ? `（${product.nameZh}）` : "", product.spec ? `｜${product.spec}` : ""].join(" ").replace(/\s+/g, " ").trim();
+  if (product) return [code, product.name, product.nameZh ? `（${product.nameZh}）` : "", product.spec ? `｜${product.spec}` : "", product.fromHistory ? "（商品清單沒有）" : ""].join(" ").replace(/\s+/g, " ").trim();
   const entry = reference.history.find((item) => item.code === code);
   return entry ? `${code} ${entry.name}｜${entry.spec}（商品清單沒有）` : code;
 }

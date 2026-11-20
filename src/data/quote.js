@@ -19,7 +19,7 @@ export function quoteProduct(reference, code) {
   const product = reference.products.get(code);
   if (product) {
     const list = product.listPrice ? { listPrice: product.listPrice, listSource: "" } : historyListPrice(reference, code);
-    return { code, name: product.name, nameZh: product.nameZh, spec: product.spec, unit: product.unit, brand: product.brand, ...list, erpListDate: product.erpListDate || "", catalogListPrice: product.catalogListPrice ?? null, catalogUnit: product.catalogUnit || "", discontinued: /停產/.test(product.spec) };
+    return { code, name: product.name, nameZh: product.nameZh, spec: product.spec, unit: product.unit, brand: product.brand, ...list, erpListDate: product.erpListDate || "", catalogListPrice: product.catalogListPrice ?? null, catalogUnit: product.catalogUnit || "", discontinued: /停產/.test(product.spec), ...(product.fromHistory ? { notInCatalog: true } : {}) };
   }
   // Bought before but missing from the catalog: what the history knows.
   const entry = reference.history.find((item) => item.code === code);

@@ -1,6 +1,6 @@
 import { requestId } from "../../core/ids.js";
 import {
-  blankItem, changeCustomer, customerChoices, customerDisplayName, customerText, draftChecks, itemGross, orderTotals, withTax, parseOrderMessage, pendingChecks, priceAlertText,
+  blankItem, changeCustomer, contactChoicesFor, customerChoices, customerDisplayName, customerText, draftChecks, itemGross, orderTotals, withTax, parseOrderMessage, pendingChecks, priceAlertText,
   productCandidates, productLabel, salutationFor, secretaryText, updateItem,
 } from "../../data/order-intake.js";
 import { emptyReference } from "../../data/order-reference.js";
@@ -12,6 +12,7 @@ import {
 import { badge, confirmDialog, emptyState, h, money, toast } from "../dom.js";
 import { drawQuote, queueQuoteCode, queueQuoteCustomer, resetQuoteState } from "./quote-panel.js";
 import { registerPage } from "../app.js";
+import { openAddProduct, productPrefill } from "./add-product.js";
 import { pageHeader } from "../shell.js";
 
 // LINE 訂單: paste a LINE message (or a screenshot) → a checked draft → secretary / customer texts
@@ -143,6 +144,8 @@ export function renderLineOrder(ctx, route) {
         onClick: () => setDraft(changeCustomer(state.draft, { ...customer, ...choice, contact: customer.contact || choice.contact, salutation: "" }, { reference, today, salutations: savedSalutations(ctx.model.all), taxByCustomer: orderTaxByCustomer(ctx.model.all) })),
       })));
     });
+    // Contacts saved in the APP (客戶主檔) as well as the sheet's, for whichever customer is chosen now.
+    const contactChoices = customer.customerNo || customer.customerId ? contactChoicesFor({ model: ctx.model, reference, customerNo: customer.customerNo, customerId: customer.customerId }) : (customer.contactChoices || []);
     const contact = h("input", { value: customer.contact, placeholder: "聯絡人", "aria-label": "聯絡人", dataset: { lineContact: "" }, onChange: (event) => {
       const value = event.target.value.trim();
       setDraft({ ...state.draft, customer: { ...customer, contact: value, salutation: customer.salutation || salutationFor(value, savedSalutations(ctx.model.all)) } });
@@ -165,9 +168,9 @@ export function renderLineOrder(ctx, route) {
         onClick: () => setDraft(changeCustomer(state.draft, { ...customer, ...candidate, contact: customer.contact || candidate.contact, salutation: "" }, { reference, today, salutations: savedSalutations(ctx.model.all), taxByCustomer: orderTaxByCustomer(ctx.model.all) })),
       }))) : null,
       h("div", { className: "search-box" }, [search]), results,
-      (customer.contactChoices || []).length > 1 && !customer.contact ? h("div", { className: "stack" }, [
-        h("small", { className: "muted", text: "這位客戶有幾位聯絡人，這次是誰下單？" }),
-        h("div", { className: "chip-group", dataset: { lineContactChoices: "" } }, customer.contactChoices.map((name) => h("button", {
+      contactChoices.length && !customer.contact ? h("div", { className: "stack" }, [
+        h("small", { className: "muted", text: contactChoices.length > 1 ? "這位客戶有幾位聯絡人，這次是誰下單？" : "這次是這位聯絡人下單嗎？" }),
+        h("div", { className: "chip-group", dataset: { lineContactChoices: "" } }, contactChoices.map((name) => h("button", {
           type: "button", className: "small ghost", text: name,
           onClick: () => setDraft({ ...state.draft, customer: { ...customer, contact: name, salutation: salutationFor(name, savedSalutations(ctx.model.all)) } }),
         }))),
@@ -192,6 +195,16 @@ export function renderLineOrder(ctx, route) {
         onClick: () => editItem(index, { code: candidate.code, candidates: [...new Set([candidate.code, ...(item.candidates || [])])] }),
       })));
     });
+    // Not in 商品清單 (only in the purchase history, or nowhere): add it from here.
+    const known = item.code ? reference.products.get(item.code) : null;
+    const addButton = !known || known.fromHistory ? h("button", {
+      type: "button", className: "small ghost", dataset: { lineAddProduct: index },
+      text: known?.fromHistory ? "加到 APP新增商品…" : "找不到？新增商品…",
+      onClick: () => openAddProduct(ctx, productPrefill(reference, { code: item.code, said: item.said }), async (code) => {
+        reference = (await loadReference(ctx.db)).reference;
+        editItem(index, { code, candidates: [...new Set([code, ...(item.candidates || [])])] });
+      }),
+    }) : null;
     const number = (name, value, label, onChange) => h("label", { className: "field" }, [
       h("span", { className: "field-label", text: label }),
       h("input", { type: "number", min: 0, step: "any", value: value ?? "", dataset: { [name]: index }, className: value === null || value === undefined || value === "" ? "needs-check" : "", onChange }),
@@ -204,7 +217,7 @@ export function renderLineOrder(ctx, route) {
       ]),
       h("div", { className: "muted", text: item.code ? `${item.codeStatus === "確定" ? "料號" : "建議料號"}：${productLabel(reference, item.code)}` : "料號待確認" }),
       picker,
-      h("div", { className: "search-box" }, [search]), results,
+      h("div", { className: "search-box" }, [search]), results, addButton,
       h("div", { className: "form-grid" }, [
         number("lineQty", item.quantity, "數量", (event) => editItem(index, { quantity: event.target.value === "" ? null : Number(event.target.value) })),
         h("label", { className: "field" }, [h("span", { className: "field-label", text: "單位" }), h("input", { value: item.unit, dataset: { lineUnit: index }, onChange: (event) => editItem(index, { spokenUnit: event.target.value.trim() }) })]),
@@ -350,7 +363,7 @@ export function renderLineOrder(ctx, route) {
   }
 
   const showReference = (loaded) => {
-    const counts = `客戶 ${reference.customerRows.toLocaleString()}・商品 ${reference.productList.length.toLocaleString()}・購買紀錄 ${reference.history.length.toLocaleString()}・LINE 訂單 ${reference.lineOrders.length.toLocaleString()}`;
+    const counts = `客戶 ${reference.customerRows.toLocaleString()}・商品 ${reference.productList.filter((product) => !product.fromHistory).length.toLocaleString()}・購買紀錄 ${reference.history.length.toLocaleString()}・LINE 訂單 ${reference.lineOrders.length.toLocaleString()}`;
     refInfo.textContent = loaded.loadedAt ? `${counts}（更新於 ${new Date(loaded.loadedAt).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}）`
       : ctx.transport ? "還沒有讀取商品清單與購買紀錄，請按右邊「更新商品與購買紀錄」" : "還沒有讀取商品清單與購買紀錄：這個瀏覽器還沒連上 Google 試算表（更多 → 設定 → 同步中心 →「測試連線」看原因）";
   };
@@ -430,7 +443,7 @@ export function renderLineOrder(ctx, route) {
           return { code, name: row?.name, quantity: pick.quantity === "" || pick.quantity === undefined ? null : Number(pick.quantity), price };
         });
         state.saved = null;
-        setDraft(draftFromPicks({ customer, picks, reference, today, salutations: savedSalutations(ctx.model.all), taxByCustomer: orderTaxByCustomer(ctx.model.all) }));
+        setDraft(draftFromPicks({ customer, picks, reference, today, model: ctx.model, salutations: savedSalutations(ctx.model.all), taxByCustomer: orderTaxByCustomer(ctx.model.all) }));
         draftBox.scrollIntoView?.({ behavior: "smooth", block: "start" });
       } });
     const productSearch = h("input", { type: "search", placeholder: "加入其他商品：料號或品名", "aria-label": "加入其他商品", dataset: { reorderProductSearch: "" } });

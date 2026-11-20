@@ -92,6 +92,22 @@ export function normalizeReference(raw = {}) {
     }
   }
   history.sort((left, right) => String(right.date).localeCompare(String(left.date)) || (left.source === "出貨" ? -1 : 1));
+  // Added from the APP (分頁「APP新增商品」): usable right away; 商品清單 wins if it lists the code too.
+  for (const row of raw.appProducts || []) {
+    const code = normalizeCode(row["料件編號"]);
+    if (!code || products.has(code)) continue;
+    const name = cleanText(row["品名"]);
+    products.set(code, {
+      code, name, nameZh: cleanText(row["中文名稱"]), spec: cleanText(row["規格"]), brand: cleanText(row["產品品牌"]),
+      listPrice: number(row["未稅定價"]), unit: cleanText(row["銷售單位"]), acronyms: acronyms(name), fromApp: true, addedAt: cleanText(row["新增日期"]),
+    });
+  }
+  // Shipped before but missing from 商品清單 (GIB211693): known from the shipments, so orders and
+  // quotes can still recognise it. Marked fromHistory; the ERP 訂價 below gives it a price.
+  for (const entry of history) {
+    if (entry.source !== "出貨" || !entry.code || products.has(entry.code) || !entry.name) continue;
+    products.set(entry.code, { code: entry.code, name: entry.name, nameZh: "", spec: entry.spec, brand: "", listPrice: null, unit: entry.unit, acronyms: acronyms(entry.name), fromHistory: true });
+  }
   // The ERP 訂價 on the latest shipment is the right list price (商品清單's 未稅定價 is often stale
   // or for another unit: 9,800 per CTN while the ERP sells it at 7,000 per SET). It replaces the
   // catalog price and unit; the catalog's own stays as catalogListPrice / catalogUnit.
@@ -136,7 +152,7 @@ export function normalizeReference(raw = {}) {
 // The Apps Script sends each sheet as { headers, rows } to keep the payload small.
 export function tablesToRecords(payload = {}) {
   const records = (table) => (table?.rows || []).map((row) => Object.fromEntries((table.headers || []).map((header, index) => [header, row[index] ?? ""])));
-  return { customers: records(payload.customers), products: records(payload.products), history: records(payload.history), lineOrders: records(payload.lineOrders), loadedAt: payload.loadedAt || "" };
+  return { customers: records(payload.customers), products: records(payload.products), history: records(payload.history), lineOrders: records(payload.lineOrders), appProducts: records(payload.appProducts), loadedAt: payload.loadedAt || "" };
 }
 
 export function emptyReference() {

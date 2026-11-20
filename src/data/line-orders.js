@@ -43,6 +43,38 @@ export async function refreshReference(db, transport) {
   }
 }
 
+// A product missing from 商品清單, added from the APP: written to the 「APP新增商品」 tab (never to
+// 商品清單 itself) and to this device's copy, so orders and quotes can use it at once.
+export function productFormErrors(product) {
+  const errors = {};
+  if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{2,40}$/.test(String(product.code || "").trim())) errors.code = "料號只能有英文、數字和 - _ . /，至少 3 個字";
+  if (!String(product.name || "").trim()) errors.name = "請填品名";
+  const price = String(product.listPrice ?? "").trim();
+  if (price && !(Number(price) >= 0)) errors.listPrice = "定價請填數字";
+  return errors;
+}
+
+export async function addProduct(db, transport, product) {
+  const errors = productFormErrors(product);
+  if (Object.keys(errors).length) return { ok: false, errors };
+  if (!transport) return { ok: false, message: "還沒連上 Google 試算表（設定 → 同步），商品沒有存" };
+  const clean = {
+    code: String(product.code).trim().toUpperCase(), name: String(product.name).trim(), nameZh: String(product.nameZh || "").trim(), spec: String(product.spec || "").trim(),
+    brand: String(product.brand || "").trim(), listPrice: String(product.listPrice ?? "").trim() === "" ? "" : Number(product.listPrice), unit: String(product.unit || "").trim().toUpperCase(), note: String(product.note || "").trim(),
+  };
+  try {
+    const response = await transport.call("appendProduct", { product: clean });
+    if (!response?.ok) return { ok: false, message: response?.error === "Unknown action" ? "Apps Script 還是舊版，請先更新並重新部署" : response?.error || "沒有存成功" };
+  } catch (error) {
+    return { ok: false, message: explainServerError(error) };
+  }
+  const stored = (await db.getMeta(REFERENCE_META, null)) || tablesToRecords({});
+  const row = { 料件編號: clean.code, 品名: clean.name, 中文名稱: clean.nameZh, 規格: clean.spec, 產品品牌: clean.brand, 未稅定價: clean.listPrice, 銷售單位: clean.unit, 新增日期: new Date().toISOString().slice(0, 10), 備註: clean.note };
+  await db.setMeta(REFERENCE_META, { ...stored, appProducts: [...(stored.appProducts || []).filter((item) => String(item["料件編號"]).toUpperCase() !== clean.code), row] });
+  cached = { key: "", reference: null };
+  return { ok: true, code: clean.code };
+}
+
 // Turns what the Apps Script answers into something the user can act on.
 export function explainServerError(error) {
   const message = String(error?.message || error || "");

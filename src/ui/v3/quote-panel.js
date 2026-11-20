@@ -1,6 +1,7 @@
 import { customerChoices } from "../../data/order-intake.js";
 import { customerDeal, listPriceDoubt, listPriceDoubtCsv, listPriceDoubts, listPriceDoubtText, quoteCandidates, quoteProduct, quoteText, recentDeals, startingPrice } from "../../data/quote.js";
 import { badge, h, money } from "../dom.js";
+import { openAddProduct, productPrefill } from "./add-product.js";
 
 // 產品報價 (a tab of the 訂單 page): find products by code or name, see the list price and what
 // customers recently paid, set the price to quote, and copy one block for LINE.
@@ -75,7 +76,13 @@ export function drawQuote(box, { ctx, reference }) {
     if (!query) { results.replaceChildren(); return; }
     if (!reference.productList.length) { results.replaceChildren(h("li", { className: "muted", text: "還沒有商品清單，請先按「更新商品與購買紀錄」。" })); return; }
     const found = quoteCandidates(reference, query, 8);
-    if (!found.length) { results.replaceChildren(h("li", { className: "muted", text: `商品清單裡找不到「${query}」，試試料號或英文品名的一部分。` })); return; }
+    if (!found.length) {
+      results.replaceChildren(h("li", { className: "stack" }, [
+        h("span", { className: "muted", text: `商品清單裡找不到「${query}」，試試料號或英文品名的一部分。` }),
+        h("button", { type: "button", className: "small ghost", dataset: { quoteAddProduct: "" }, text: `新增「${query}」這個商品…`, onClick: () => openAddProduct(ctx, productPrefill(reference, { said: query }), () => ctx.render()) }),
+      ]));
+      return;
+    }
     results.replaceChildren(...found.map((product) => {
       const mine = customerDeal(reference, quote.customer?.customerNo, product.code);
       const deals = recentDeals(reference, product.code, 3);
