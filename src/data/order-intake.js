@@ -755,9 +755,13 @@ export function customerDisplayName(draft) {
 // 未稅 (the default) shows only 未稅 prices; switched to 含稅 it shows both, as the secretary needs both then.
 export function secretaryText(draft) {
   const inclusive = draft.taxType?.value === "含稅";
+  // The company and the person who ordered on separate lines: 客戶姓名：屏科大食科邱秋霞／聯絡窗口：江倉政.
+  const { company = "", contact = "" } = draft.customer;
+  const contactLine = contact && company && !company.includes(contact) ? contact : "";
   const lines = [
-    `客戶姓名：${customerDisplayName(draft) || "待確認"}`,
-    draft.customer.otherContact ? `客戶窗口：${draft.customer.otherContact}` : null,
+    `客戶姓名：${(contactLine ? company : customerDisplayName(draft)) || "待確認"}`,
+    contactLine ? `聯絡窗口：${contactLine}` : null,
+    draft.customer.otherContact ? `其他窗口：${draft.customer.otherContact}` : null,
     `客戶編號：${draft.customer.customerNo || "待確認"}`,
   ].filter((line) => line !== null);
   draft.items.forEach((item, index) => {

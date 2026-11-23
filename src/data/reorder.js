@@ -1,4 +1,5 @@
 import { addDays } from "../core/dates.js";
+import { comparisonKey } from "../core/text.js";
 import { contactChoicesFor, defaultTaxType, draftChecks, finishItem, salutationFor } from "./order-intake.js";
 
 // 常購快速下單: what a customer buys again and again, picked by hand instead of read from a message.
@@ -25,6 +26,16 @@ export function customerPurchases(reference, customerNo, { today, recentDays = 3
       recent: !since || String(row.last.date) >= since, inCatalog: Boolean(product),
     };
   }).sort((left, right) => right.count - left.count || String(right.lastDate).localeCompare(String(left.lastDate)));
+}
+
+// Finding one product among 40+: every word typed (code, English or Chinese name, spec) must match.
+export function filterPurchases(rows, query) {
+  const words = String(query || "").trim().split(/\s+/).map(comparisonKey).filter(Boolean);
+  if (!words.length) return rows;
+  return rows.filter((row) => {
+    const haystack = comparisonKey(`${row.code} ${row.name} ${row.nameZh || ""} ${row.spec || ""}`);
+    return words.every((word) => haystack.includes(word));
+  });
 }
 
 // 「照上次訂單」: every product on the customer's most recent order date, with that order's quantities.

@@ -4,7 +4,7 @@ import {
   productCandidates, productLabel, salutationFor, secretaryText, updateItem,
 } from "../../data/order-intake.js";
 import { emptyReference } from "../../data/order-reference.js";
-import { customerPurchases, draftFromPicks, lastOrder } from "../../data/reorder.js";
+import { customerPurchases, draftFromPicks, filterPurchases, lastOrder } from "../../data/reorder.js";
 import {
   appIdsOf, draftRows, LINE_SHEETS, learnAlias, loadReference, orderAliases, recognizeImage, refreshReference, saveLineOrder, saveSalutation,
   orderTaxByCustomer, rememberTax, savedOrderRows, savedSalutations, setLineOrderStatus, sheetState, writeOrderToSheet,
@@ -405,11 +405,11 @@ export function renderLineOrder(ctx, route) {
   const reorderBox = h("section", { className: "card stack", dataset: { reorder: "" } });
   const reorder = state.reorder;
   if (route?.query?.get("customerNo") && reorder.customer?.customerNo !== route.query.get("customerNo")) {
-    Object.assign(reorder, { customer: { customerNo: route.query.get("customerNo"), company: route.query.get("name") || "", contact: "", customerId: route.query.get("customer") || "" }, picks: {}, showAll: false });
+    Object.assign(reorder, { customer: { customerNo: route.query.get("customerNo"), company: route.query.get("name") || "", contact: "", customerId: route.query.get("customer") || "" }, picks: {}, showAll: false, filter: "" });
   }
 
   function pickCustomer(choice) {
-    Object.assign(reorder, { customer: choice, picks: {}, showAll: false });
+    Object.assign(reorder, { customer: choice, picks: {}, showAll: false, filter: "" });
     drawReorder();
   }
 
@@ -472,18 +472,36 @@ export function renderLineOrder(ctx, route) {
         h("div", { className: "reorder-inputs" }, [qty, price]),
       ]);
     };
+    // Searching covers everything this customer bought (older than a year too); only the list
+    // redraws while typing, so the box keeps focus.
+    const list = h("ul", { className: "reorder-list" });
+    const filterNote = h("small", { className: "muted", dataset: { reorderFilterNote: "" } });
+    const showAllSlot = h("div");
+    const fillList = () => {
+      const query = reorder.filter || "";
+      const matched = query.trim() ? filterPurchases([...extraRows, ...rows], query) : [...extraRows, ...shown];
+      list.replaceChildren(...matched.map(row));
+      const pickedHidden = query.trim() ? picked.filter(([code]) => !matched.some((item) => item.code === code)).length : 0;
+      filterNote.textContent = query.trim() ? `找到 ${matched.length} 項${pickedHidden ? `（另有 ${pickedHidden} 項已勾選，沒顯示但會一起下單）` : ""}` : "";
+      showAllSlot.replaceChildren(!query.trim() && rows.length > shown.length ? h("button", { type: "button", className: "small ghost", dataset: { reorderShowAll: "" }, text: `顯示一年前買過的（還有 ${rows.length - shown.length} 項）`, onClick: () => { reorder.showAll = true; drawReorder(); } }) : "");
+    };
+    const filter = h("input", { type: "search", value: reorder.filter || "", placeholder: `在 ${rows.length} 種品項裡找：料號、品名、中文名稱`, "aria-label": "搜尋這位客戶買過的品項", dataset: { reorderFilter: "" } });
+    filter.addEventListener("input", () => { reorder.filter = filter.value; fillList(); });
+    fillList();
     reorderBox.replaceChildren(
       h("div", { className: "section-head" }, [
         h("div", {}, [h("strong", { text: `${customer.company || "客戶"} #${customer.customerNo}` }), h("div", { className: "muted", text: rows.length ? `買過 ${rows.length} 種品項` : "購買紀錄裡沒有這位客戶" })]),
-        h("button", { type: "button", className: "small ghost", text: "換客戶", onClick: () => { reorder.customer = null; drawReorder(); } }),
+        h("button", { type: "button", className: "small ghost", text: "換客戶", onClick: () => { reorder.customer = null; reorder.filter = ""; drawReorder(); } }),
       ]),
       last.items.length ? h("button", { type: "button", className: "ghost", dataset: { reorderLast: "" }, text: `照上次訂單（${last.date.replaceAll("-", "/")}，${last.items.length} 項）`, onClick: () => {
         reorder.picks = Object.fromEntries(last.items.map((item) => [item.code, { checked: true, quantity: item.quantity ?? 1 }]));
         reorder.showAll = reorder.showAll || last.items.some((item) => !rows.find((row) => row.code === item.code)?.recent);
         drawReorder();
       } }) : null,
-      h("ul", { className: "reorder-list" }, [...extraRows, ...shown].map(row)),
-      rows.length > shown.length ? h("button", { type: "button", className: "small ghost", dataset: { reorderShowAll: "" }, text: `顯示一年前買過的（還有 ${rows.length - shown.length} 項）`, onClick: () => { reorder.showAll = true; drawReorder(); } }) : null,
+      rows.length > 8 ? h("div", { className: "search-box" }, [filter]) : null,
+      filterNote,
+      list,
+      showAllSlot,
       h("div", { className: "search-box" }, [productSearch]), productResults,
       h("div", { className: "button-row" }, [generate]),
     );
