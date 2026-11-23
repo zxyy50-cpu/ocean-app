@@ -30,13 +30,10 @@ function doubtNote(doubt) {
   ]);
 }
 
-// 「ERP 訂價（2026/04/01）」, and the 商品清單 price it replaced when that one differs.
+// 「ERP 訂價（2026/04/01）」. 商品清單's own price is left out: where it differs it is wrong
+// (it is still in the 商品清單定價可疑 list for whoever keeps 商品清單).
 function priceOrigin(product) {
-  if (product.erpListDate) {
-    const old = product.catalogListPrice;
-    const differs = old && (old !== product.listPrice || (product.catalogUnit || "") !== (product.unit || ""));
-    return `・ERP 訂價（${String(product.erpListDate).replaceAll("-", "/")}）${differs ? `，商品清單寫 ${priceText(old, product.catalogUnit)}` : ""}`;
-  }
+  if (product.erpListDate) return `・ERP 訂價（${String(product.erpListDate).replaceAll("-", "/")}）`;
   return product.listSource ? `・商品清單沒填，取自${product.listSource}` : "";
 }
 
